@@ -1,0 +1,29 @@
+{
+  "name": "content-os",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite",
+    "preview": "vite"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phuctohoai2002-blip/Content-OS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/phuctohoai2002-blip/Content-OS/issues"
+  },
+  "homepage": "https://github.com/phuctohoai2002-blip/Content-OS#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3"
+  },
+  "devDependencies": {
+    "vite": "^8.2.1"
+  }
+}

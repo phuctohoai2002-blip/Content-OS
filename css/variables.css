@@ -1,0 +1,89 @@
+:root {
+
+    /* =========================
+       COLORS
+    ========================= */
+
+    --color-bg: #f6f7f9;
+    --color-surface: #ffffff;
+    --color-surface-soft: #fafafa;
+
+    --color-sidebar: #111214;
+
+    --color-text: #17191c;
+    --color-text-secondary: #6f737a;
+    --color-text-muted: #9ca1a8;
+
+    --color-border: #e6e8eb;
+
+    --color-primary: #111214;
+    --color-primary-hover: #2a2c30;
+
+    --color-success: #22a06b;
+    --color-warning: #e59f26;
+    --color-danger: #d64545;
+    --color-info: #4c7dff;
+
+
+    /* =========================
+       NICHE COLORS
+    ========================= */
+
+    --color-fashion: #d76a92;
+    --color-grooming: #4f8a72;
+    --color-digital: #6f63d8;
+    --color-master: #8a8f98;
+
+
+    /* =========================
+       SPACING
+    ========================= */
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+
+
+    /* =========================
+       RADIUS
+    ========================= */
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+
+    /* =========================
+       SHADOW
+    ========================= */
+
+    --shadow-sm:
+        0 1px 2px rgba(0, 0, 0, 0.04);
+
+    --shadow-md:
+        0 4px 14px rgba(0, 0, 0, 0.06);
+
+
+    /* =========================
+       LAYOUT
+    ========================= */
+
+    --sidebar-width: 250px;
+    --topbar-height: 72px;
+
+
+    /* =========================
+       TRANSITION
+    ========================= */
+
+    --transition-fast:
+        150ms ease;
+
+    --transition-normal:
+        220ms ease;
+}
