@@ -3,49 +3,49 @@ const routes = {
     dashboard: {
         title: "Dashboard",
         breadcrumb: "Workspace",
-        file: "pages/dashboard.html"
+        file: "pages/pages/dashboard.html"
     },
 
     research: {
         title: "Research",
         breadcrumb: "Workspace",
-        file: "pages/research.html"
+        file: "pages/pages/research.html"
     },
 
     content: {
         title: "Content",
         breadcrumb: "Workspace",
-        file: "pages/content.html"
+        file: "pages/pages/content.html"
     },
 
     calendar: {
         title: "Calendar",
         breadcrumb: "Workspace",
-        file: "pages/calendar.html"
+        file: "pages/pages/calendar.html"
     },
 
     tracking: {
         title: "Video Tracking",
         breadcrumb: "Tracking",
-        file: "pages/tracking.html"
+        file: "pages/pages/tracking.html"
     },
 
     analytics: {
         title: "Analytics",
         breadcrumb: "Tracking",
-        file: "pages/analytics.html"
+        file: "pages/pages/analytics.html"
     },
 
     niches: {
         title: "Niches",
         breadcrumb: "System",
-        file: "pages/niches.html"
+        file: "pages/pages/niches.html"
     },
 
     settings: {
         title: "Settings",
         breadcrumb: "System",
-        file: "pages/settings.html"
+        file: "pages/pages/settings.html"
     }
 
 };
@@ -62,7 +62,6 @@ async function loadPage(pageName) {
         document.getElementById("pageTitle");
 
     pageTitle.textContent = route.title;
-
 
     try {
 
@@ -92,7 +91,6 @@ async function loadPage(pageName) {
 
     }
 
-
     updateActiveNavigation(pageName);
 
 }
@@ -103,17 +101,13 @@ function updateActiveNavigation(pageName) {
     document
         .querySelectorAll(".nav-item")
         .forEach(item => {
-
             item.classList.remove("active");
-
         });
-
 
     const activeItem =
         document.querySelector(
             `.nav-item[href="#${pageName}"]`
         );
-
 
     if (activeItem) {
         activeItem.classList.add("active");
@@ -128,7 +122,6 @@ function initRouter() {
         window.location.hash.replace("#", "");
 
     loadPage(hash || "dashboard");
-
 
     window.addEventListener(
         "hashchange",
