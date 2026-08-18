@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,400..700&display=swap');
+
 * {
     margin: 0;
     padding: 0;
@@ -6,21 +8,24 @@
 
 html {
     font-size: 16px;
+    scroll-behavior: smooth;
 }
 
 body {
     min-height: 100vh;
     font-family:
-        Inter,
+        'Google Sans Flex',
+        'Google Sans',
         -apple-system,
         BlinkMacSystemFont,
-        "Segoe UI",
+        'Segoe UI',
         sans-serif;
 
-    background: #f6f7f9;
-    color: #17191c;
+    background: var(--color-bg);
+    color: var(--color-text);
 
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 button,
@@ -43,4 +48,13 @@ a {
 ul,
 ol {
     list-style: none;
+}
+
+::selection {
+    background: rgba(139, 124, 235, 0.22);
+}
+
+:focus-visible {
+    outline: 3px solid rgba(126, 155, 234, 0.35);
+    outline-offset: 2px;
 }
