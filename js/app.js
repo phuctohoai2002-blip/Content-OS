@@ -80,7 +80,10 @@ function selectNiche(nicheCode) {
     const option = document.querySelector(`.niche-option[data-niche="${nicheCode}"]`);
     if (!option) return;
 
+    const previousNiche = typeof getCurrentNiche === "function" ? getCurrentNiche() : "ALL";
     const nicheId = option.dataset.nicheId || null;
+    const changed = previousNiche !== nicheCode;
+
     setCurrentNiche(nicheCode, nicheId);
 
     const name = document.getElementById("currentNicheName");
@@ -102,7 +105,12 @@ function selectNiche(nicheCode) {
         );
     }
 
-    window.dispatchEvent(new CustomEvent("nicheChanged", { detail: { nicheCode, nicheId } }));
+    // Do not fire this on the initial selector setup.
+    // The router already initializes the current page, so firing here would
+    // start a second dashboard request and leave the loading state visible.
+    if (changed) {
+        window.dispatchEvent(new CustomEvent("nicheChanged", { detail: { nicheCode, nicheId } }));
+    }
 }
 
 async function initDashboardWorkspace() {
