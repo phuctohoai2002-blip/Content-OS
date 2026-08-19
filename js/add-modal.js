@@ -10,7 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openModal(type) { modal.innerHTML = type === "video" ? videoTemplate() : type === "creator" ? creatorTemplate() : productTemplate(); modal.classList.remove("hidden"); modal.setAttribute("aria-hidden", "false"); bindModal(type); }
     function closeModal() { modal.classList.add("hidden"); modal.setAttribute("aria-hidden", "true"); modal.innerHTML = ""; }
-    const formMessage = form => form.querySelector(".add-form-message");
     const statusBox = (form, name) => form.querySelector(`[data-status="${name}"]`);
 
     function bindModal(type) {
@@ -26,14 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function bindVideoForm(form) {
-        const url = form.elements.url, creatorCode = form.elements.creator_code, videoId = form.elements.video_id;
+        const url = form.elements.url, creatorCode = form.elements.creator_code, videoId = form.elements.video_id, niche = form.elements.niche_id;
         url.addEventListener("input", async () => { videoId.value = extractVideoId(url.value); await validateVideoId(form); });
         videoId.addEventListener("input", () => validateVideoId(form));
         creatorCode.addEventListener("blur", () => resolveCreator(form));
         creatorCode.addEventListener("input", () => { form.elements.download_path.value = ""; statusBox(form, "creator").textContent = ""; });
+        niche.addEventListener("change", async () => { await loadPillars(form, niche.value); form.elements.topic_id.innerHTML = '<option value="">Select topic</option>'; });
         form.elements.pillar_id.addEventListener("change", () => loadTopics(form));
-        loadTags(form);
-        loadPillars(form, "");
+        loadTags(form); loadPillars(form, "");
     }
 
     async function validateVideoId(form) {
@@ -60,9 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function loadPillars(form, nicheId = "") {
-        const select = form.elements.pillar_id; select.innerHTML = '<option value="">Select pillar</option>';
+        const select = form.elements.pillar_id; select.innerHTML = '<option value="">Select pillar</option> <option value="__loading" disabled>Loading…</option>';
         let query = supabase.from("pillars").select("id,name,niche_id").order("name"); if (nicheId) query = query.eq("niche_id", nicheId);
         const { data, error } = await query; if (error) { select.innerHTML = '<option value="">Pillars unavailable</option>'; return; }
+        select.innerHTML = '<option value="">Select pillar</option>';
         (data || []).forEach(row => select.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(row.id)}">${escapeHtml(row.name)}</option>`));
     }
     async function loadTopics(form) {
@@ -76,10 +76,8 @@ document.addEventListener("DOMContentLoaded", () => {
         catch { box.innerHTML = '<span class="taxonomy-muted">Tags are not configured yet. Add the tags table migration, then reload.</span>'; }
     }
     async function loadNiches(form) {
-        try {
-            const { data, error } = await supabase.from("niches").select("id,name,niche_code").eq("status", "active").order("sort_order"); if (error) throw error;
-            const select = form.elements.niche_id; (data || []).forEach(niche => select.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(niche.id)}">${escapeHtml(niche.name)} (${escapeHtml(niche.niche_code)})</option>`));
-        } catch (error) { console.error("Could not load niches:", error); }
+        try { const { data, error } = await supabase.from("niches").select("id,name,niche_code").eq("status", "active").order("sort_order"); if (error) throw error; const select = form.elements.niche_id; (data || []).forEach(niche => select.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(niche.id)}">${escapeHtml(niche.name)} (${escapeHtml(niche.niche_code)})</option>`)); }
+        catch (error) { console.error("Could not load niches:", error); }
     }
 
     async function saveVideo(form) {
@@ -96,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function getDownloadPath(row) { return row.download_path || row.download_folder || row.download_dir || row.save_path || row.storage_path || ""; }
     function extractVideoId(url) { try { const parsed = new URL(url); const queryId = parsed.searchParams.get("vid") || parsed.searchParams.get("video_id") || parsed.searchParams.get("item_id") || parsed.searchParams.get("aweme_id"); if (queryId) return queryId; const parts = parsed.pathname.split("/").filter(Boolean); return parts.at(-1) || ""; } catch { return ""; } }
     function looksLikeSchemaError(error) { const message = String(error?.message || "").toLowerCase(); return message.includes("column") || message.includes("schema cache") || message.includes("could not find the table"); }
-    function showFormMessage(form, message, error) { const box = formMessage(form); if (!box) return; box.textContent = message; box.classList.toggle("error", error); box.classList.remove("hidden"); }
+    function showFormMessage(form, message, error) { const box = form.querySelector(".add-form-message"); if (!box) return; box.textContent = message; box.classList.toggle("error", error); box.classList.remove("hidden"); }
     function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'"':"&quot;"}[char])); }
     const field = (label,name,type="text",attrs="") => `<label class="add-field"><span>${label}</span><input name="${name}" type="${type}" ${attrs}></label>`;
     const select = (label,name,options,attrs="") => `<label class="add-field"><span>${label}</span><select name="${name}" ${attrs}>${options.map(([value,text])=>`<option value="${value}">${text}</option>`).join("")}</select></label>`;
