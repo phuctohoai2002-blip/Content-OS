@@ -1,43 +1,58 @@
-<div class="research-intro">
-    <div>
-        <h2>Research Workspace</h2>
-        <p class="page-description">Capture, classify and evaluate the sources that feed your content system.</p>
+<div id="researchWorkspace">
+    <div class="page-header">
+        <div>
+            <h2 id="researchTypeTitle">Sources</h2>
+            <p id="researchTypeDescription" class="page-description">Capture and manage the research sources feeding your content system.</p>
+        </div>
+        <div class="dashboard-live-status"><span class="live-dot"></span> Live data</div>
     </div>
-</div>
 
-<div class="quick-capture">
-    <input id="sourceUrlInput" type="url" placeholder="Paste a source URL..." aria-label="Source URL">
-    <button id="captureButton" class="capture-button">Capture</button>
-</div>
-
-<div class="stat-grid research-stats">
-    <div class="stat-card"><div class="stat-label">SOURCES</div><div class="stat-value">128</div></div>
-    <div class="stat-card"><div class="stat-label">CREATORS</div><div class="stat-value">42</div></div>
-    <div class="stat-card"><div class="stat-label">KEYWORDS</div><div class="stat-value">356</div></div>
-    <div class="stat-card"><div class="stat-label">PILLARS</div><div class="stat-value">14</div></div>
-    <div class="stat-card"><div class="stat-label">TOPICS</div><div class="stat-value">68</div></div>
-</div>
-
-<div class="section-heading"><h3>Recent Sources</h3><span>Latest captured research</span></div>
-<div class="card">
-    <div class="table-wrapper">
-        <table class="data-table">
-            <thead><tr><th>Source</th><th>Creator</th><th>Pillar</th><th>Platform</th><th>Status</th><th>Score</th><th>Date Added</th></tr></thead>
-            <tbody>
-                <tr><td><div class="source-title">Why this outfit looks expensive</div><div class="source-subtitle">Fashion analysis</div></td><td>@stylearchive</td><td>Fashion Knowledge</td><td><span class="badge">Douyin</span></td><td><span class="badge">Selected</span></td><td><strong>4.8</strong></td><td>Today</td></tr>
-                <tr><td><div class="source-title">5 details that change an outfit</div><div class="source-subtitle">Styling breakdown</div></td><td>@dailylook</td><td>Styling</td><td><span class="badge">XHS</span></td><td><span class="badge">Reviewing</span></td><td><strong>4.6</strong></td><td>Today</td></tr>
-                <tr><td><div class="source-title">The history behind quiet luxury</div><div class="source-subtitle">Fashion history</div></td><td>@fashionmemo</td><td>Fashion Knowledge</td><td><span class="badge">Douyin</span></td><td><span class="badge">Discovered</span></td><td><strong>4.3</strong></td><td>Yesterday</td></tr>
-                <tr><td><div class="source-title">Why minimal outfits work</div><div class="source-subtitle">Visual principles</div></td><td>@wardrobe_lab</td><td>Minimalism</td><td><span class="badge">TikTok</span></td><td><span class="badge">Selected</span></td><td><strong>4.5</strong></td><td>Yesterday</td></tr>
-            </tbody>
-        </table>
+    <div class="research-tabs card">
+        <button type="button" data-research-type="sources" class="active">↗ Sources</button>
+        <button type="button" data-research-type="creators">◎ Creators</button>
     </div>
-</div>
 
-<div class="section-heading"><h3>Topic Distribution</h3><span>Current research coverage</span></div>
-<div class="card topic-list">
-    <div class="topic-row"><span class="topic-name">Style Inspiration</span><div class="topic-bar"><span style="width:100%"></span></div><span class="topic-count">128</span></div>
-    <div class="topic-row"><span class="topic-name">Outfit Ideas</span><div class="topic-bar"><span style="width:75%"></span></div><span class="topic-count">96</span></div>
-    <div class="topic-row"><span class="topic-name">Luxury</span><div class="topic-bar"><span style="width:66%"></span></div><span class="topic-count">84</span></div>
-    <div class="topic-row"><span class="topic-name">Minimalism</span><div class="topic-bar"><span style="width:49%"></span></div><span class="topic-count">63</span></div>
-    <div class="topic-row"><span class="topic-name">Street Style</span><div class="topic-bar"><span style="width:40%"></span></div><span class="topic-count">51</span></div>
+    <div class="stat-grid research-stats">
+        <div class="stat-card"><div class="stat-label">RECORDS</div><div id="researchRecordCount" class="stat-value">0</div><div class="stat-meta">Current research records</div></div>
+        <div class="stat-card"><div class="stat-label">WORKSPACE</div><div class="stat-value" style="font-size:24px;">Supabase</div><div class="stat-meta">Live database</div></div>
+    </div>
+
+    <div id="researchNotice" class="research-notice hidden"></div>
+
+    <div class="card research-form-card">
+        <div class="card-header"><div><h3 id="researchFormTitle">Add Source</h3><span>Save directly to your research database.</span></div></div>
+        <form id="researchForm" class="research-form">
+            <div id="sourceFields" class="research-fields">
+                <label>Source URL<input name="url" type="url" required placeholder="https://..." autocomplete="off"></label>
+                <label>Title<input name="title" type="text" placeholder="Optional source title"></label>
+                <label>Platform<input name="platform" type="text" placeholder="Douyin, XHS, TikTok..."></label>
+                <label>Status<select name="status"><option value="discovered">Discovered</option><option value="reviewing">Reviewing</option><option value="selected">Selected</option><option value="archived">Archived</option></select></label>
+                <label>Score<input name="score" type="number" min="0" max="5" step="0.1" placeholder="0–5"></label>
+            </div>
+            <div id="creatorFields" class="research-fields hidden">
+                <label>Name<input name="name" type="text" placeholder="Creator name" autocomplete="off"></label>
+                <label>Handle<input name="handle" type="text" placeholder="@creator"></label>
+                <label>Platform<input name="platform" type="text" placeholder="Douyin, XHS, TikTok..."></label>
+                <label>Status<select name="status"><option value="active">Active</option><option value="watching">Watching</option><option value="archived">Archived</option></select></label>
+            </div>
+            <div class="research-form-actions">
+                <button id="researchSubmit" type="submit" class="capture-button">Add Source</button>
+                <button id="researchCancelEdit" type="button" class="table-action hidden">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="section-heading"><h3>Research Database</h3><span>Live records from Supabase</span></div>
+    <div class="card">
+        <div class="research-toolbar">
+            <input id="researchSearch" type="search" placeholder="Search research..." aria-label="Search research">
+            <span id="researchLoading" class="badge hidden">Loading...</span>
+        </div>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead id="researchTableHead"><tr><th>Source</th><th>Creator</th><th>Platform</th><th>Status</th><th>Score</th><th>Date Added</th><th>Actions</th></tr></thead>
+                <tbody id="researchTableBody"><tr><td colspan="7"><div class="empty-state compact"><strong>Loading research...</strong></div></td></tr></tbody>
+            </table>
+        </div>
+    </div>
 </div>
