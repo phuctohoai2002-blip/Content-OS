@@ -157,6 +157,10 @@ async function initDashboardWorkspace() {
     }
 }
 
+// router.js is a classic script, while this file is an ES module.
+// Expose the dashboard initializer so the router can call it after loading the page.
+window.initDashboardWorkspace = initDashboardWorkspace;
+
 async function loadNicheNames() {
     const { data, error } = await supabase.from("niches").select("id,name,niche_code");
     if (error) throw error;
