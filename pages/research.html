@@ -9,11 +9,6 @@
         </div>
     </div>
 
-    <div class="quick-capture">
-        <input id="sourceUrlInput" type="url" placeholder="Paste a source URL..." aria-label="Source URL">
-        <button id="captureButton" class="capture-button" type="button">Capture</button>
-    </div>
-
     <div class="card" style="display:flex;gap:6px;padding:6px;margin-top:18px;">
         <button type="button" data-research-type="sources" class="research-tab active" style="padding:9px 14px;border:0;border-radius:9px;background:rgba(167,139,250,.12);color:#655a92;font-size:10px;font-weight:650;cursor:pointer;">↗ Sources</button>
         <button type="button" data-research-type="creators" class="research-tab" style="padding:9px 14px;border:0;border-radius:9px;background:transparent;color:var(--color-text-secondary);font-size:10px;font-weight:650;cursor:pointer;">◎ Creators</button>
@@ -28,38 +23,10 @@
 
     <div id="researchNotice" class="hidden" style="margin:16px 0;padding:11px 13px;border:1px solid rgba(139,124,235,.2);border-radius:10px;background:rgba(167,139,250,.08);font-size:10px;color:#655a92;"></div>
 
-    <div class="card" style="margin-top:20px;">
-        <div class="card-header">
-            <div>
-                <h3 id="researchFormTitle">Add Source</h3>
-                <span>Save directly to your Supabase research database.</span>
-            </div>
-        </div>
-        <form id="researchForm" style="padding:18px 20px;">
-            <div id="sourceFields" style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 100px;gap:10px;">
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Source URL<input name="url" type="url" required placeholder="https://..." style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"></label>
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Title<input name="title" type="text" placeholder="Optional title" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"></label>
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Platform<input name="platform" type="text" placeholder="Douyin / XHS / TikTok" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"></label>
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Status<select name="status" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"><option value="discovered">Discovered</option><option value="reviewing">Reviewing</option><option value="selected">Selected</option><option value="archived">Archived</option></select></label>
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Score<input name="score" type="number" min="0" max="5" step="0.1" placeholder="0–5" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"></label>
-            </div>
-            <div id="creatorFields" class="hidden" style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr;gap:10px;">
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Creator Name<input name="name" type="text" placeholder="Creator name" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"></label>
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Handle<input name="handle" type="text" placeholder="@creator" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"></label>
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Platform<input name="platform" type="text" placeholder="Douyin / XHS / TikTok" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"></label>
-                <label style="display:grid;gap:6px;font-size:9px;font-weight:700;color:var(--color-text-secondary);">Status<select name="status" style="width:100%;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;"><option value="active">Active</option><option value="watching">Watching</option><option value="archived">Archived</option></select></label>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:14px;">
-                <button id="researchSubmit" type="submit" class="capture-button">Add Source</button>
-                <button id="researchCancelEdit" type="button" class="table-action hidden">Cancel</button>
-            </div>
-        </form>
-    </div>
-
-    <div class="section-heading"><h3>Recent Sources</h3><span>Live Supabase data</span></div>
+    <div class="section-heading"><h3>Research Database</h3><span>Live Supabase data</span></div>
     <div class="card">
         <div style="padding:12px 14px;border-bottom:1px solid var(--color-border);">
-            <input id="researchSearch" type="search" placeholder="Search sources..." aria-label="Search research" style="width:100%;max-width:360px;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;">
+            <input id="researchSearch" type="search" placeholder="Search research..." aria-label="Search research" style="width:100%;max-width:360px;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;">
         </div>
         <div class="table-wrapper">
             <table class="data-table">
@@ -82,7 +49,5 @@
         #researchWorkspace .hidden{display:none!important}
         #researchWorkspace .research-tab.active{background:rgba(167,139,250,.12)!important;color:#655a92!important}
         #researchWorkspace .research-tab:hover{background:rgba(167,139,250,.08)!important}
-        @media(max-width:1000px){#sourceFields,#creatorFields{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
-        @media(max-width:600px){#sourceFields,#creatorFields{grid-template-columns:1fr!important}}
     </style>
 </div>
