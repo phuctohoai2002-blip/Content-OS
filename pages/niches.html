@@ -1,14 +1,35 @@
-<div class="page-header">
-    <div>
-        <h2>Niches</h2>
-        <p class="page-description">Manage your content niches and taxonomy.</p>
+<div id="taxonomyWorkspace">
+    <div class="page-header">
+        <div><h2>Taxonomy</h2><p class="page-description">Manage the hierarchy that organizes your content: Niche → Pillar → Topic → Tag.</p></div>
+        <div class="dashboard-live-status"><span class="live-dot"></span> Live data</div>
     </div>
-</div>
 
-<div class="card">
-    <div class="empty-state">
-        <div class="empty-state-icon">◈</div>
-        <strong>Niche Manager</strong>
-        <p>Niche, pillar and topic management will be built here.</p>
+    <div class="taxonomy-tabs card">
+        <button type="button" class="active" data-taxonomy-type="niches">◈ Niches</button>
+        <button type="button" data-taxonomy-type="pillars">◉ Pillars</button>
+        <button type="button" data-taxonomy-type="topics">◇ Topics</button>
+        <button type="button" data-taxonomy-type="tags"># Tags</button>
+    </div>
+
+    <div id="taxonomyNotice" class="research-notice hidden"></div>
+
+    <div class="card research-form-card">
+        <div class="card-header"><div><h3 id="taxonomyFormTitle">Add Niche</h3><span id="taxonomyDescription">Manage niches used across your content system.</span></div></div>
+        <form id="taxonomyForm" class="research-form">
+            <div class="taxonomy-form-grid">
+                <label>Name<input name="name" required placeholder="Name"></label>
+                <label id="nicheCodeField">Code<input name="code" placeholder="FAS, GRM, DIG..."></label>
+                <label id="nicheParentField" class="hidden">Niche<select id="taxonomyNiche" name="niche_id"><option value="">Select niche</option></select></label>
+                <label id="pillarParentField" class="hidden">Pillar<select id="taxonomyPillar" name="pillar_id"><option value="">Select pillar</option></select></label>
+                <label class="taxonomy-description-field">Description<input name="description" placeholder="Optional description"></label>
+            </div>
+            <div class="research-form-actions"><button id="taxonomySubmit" type="submit" class="capture-button">Add Niche</button><button id="taxonomyCancel" type="button" class="table-action hidden">Cancel</button></div>
+        </form>
+    </div>
+
+    <div class="section-heading"><h3>Taxonomy Database</h3><span><strong id="taxonomyCount">0</strong> records</span></div>
+    <div class="card">
+        <div class="research-toolbar"><input id="taxonomySearch" type="search" placeholder="Search taxonomy..."><span id="taxonomyLoading" class="badge hidden">Loading...</span></div>
+        <div class="table-wrapper"><table class="data-table"><thead><tr><th>Name</th><th>Code / Slug</th><th>Description</th><th>Status</th><th>Date Added</th><th>Actions</th></tr></thead><tbody id="taxonomyTableBody"><tr><td colspan="6"><div class="empty-state compact"><strong>Loading taxonomy...</strong></div></td></tr></tbody></table></div>
     </div>
 </div>
