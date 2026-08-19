@@ -4,106 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Content OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400..700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/reset.css">
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/components.css">
 </head>
 <body>
-
 <div id="app">
-
-    <!-- SIDEBAR -->
     <aside id="sidebar" class="sidebar">
-
-        <div class="sidebar-header">
-            <div class="logo-mark">C</div>
-            <div class="logo-text">
-                <strong>Content OS</strong>
-                <span>Personal Workspace</span>
-            </div>
+        <div class="sidebar-brand">
+            <div class="logo-mark">✦</div>
+            <div class="logo-text"><strong>Content OS</strong><span>Content Intelligence</span></div>
         </div>
-
         <div class="niche-selector">
-            <label>Current Niche</label>
+            <label>Workspace</label>
             <button id="nicheButton" class="niche-button">
-                <div class="niche-info">
-                    <span id="currentNicheDot" class="niche-dot"></span>
-                    <div>
-                        <strong id="currentNicheName">All Niches</strong>
-                        <small id="currentNicheCode">MASTER</small>
-                    </div>
-                </div>
+                <div class="niche-info"><span id="currentNicheDot" class="niche-dot"></span><div><strong id="currentNicheName">All Niches</strong><small id="currentNicheCode">MASTER</small></div></div>
                 <span class="chevron">⌄</span>
             </button>
         </div>
-
-        <nav class="sidebar-nav">
-            <div class="nav-section">
-                <span class="nav-label">WORKSPACE</span>
-                <a href="#dashboard" class="nav-item active"><span class="nav-icon">⌂</span><span>Dashboard</span></a>
-                <a href="#research" class="nav-item"><span class="nav-icon">⌕</span><span>Research</span></a>
-                <a href="#content" class="nav-item"><span class="nav-icon">▣</span><span>Content</span></a>
-                <a href="#calendar" class="nav-item"><span class="nav-icon">□</span><span>Calendar</span></a>
-            </div>
-
-            <div class="nav-section">
-                <span class="nav-label">TRACKING</span>
-                <a href="#tracking" class="nav-item"><span class="nav-icon">↗</span><span>Video Tracking</span></a>
-                <a href="#analytics" class="nav-item"><span class="nav-icon">◒</span><span>Analytics</span></a>
-            </div>
-
-            <div class="nav-section">
-                <span class="nav-label">SYSTEM</span>
-                <a href="#niches" class="nav-item"><span class="nav-icon">◈</span><span>Niches</span></a>
-                <a href="#settings" class="nav-item"><span class="nav-icon">⚙</span><span>Settings</span></a>
-            </div>
-        </nav>
-
-        <div class="sidebar-footer">
-            <div class="system-status">
-                <span class="status-dot"></span>
-                <div>
-                    <strong>System Online</strong>
-                    <small>Supabase connected</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Drag this edge to resize the sidebar -->
+        <nav id="contextNav" class="sidebar-nav"></nav>
+        <div class="sidebar-footer"><div class="system-status"><span class="status-dot"></span><div><strong>System Online</strong><small>Supabase connected</small></div></div></div>
         <div id="sidebarResizer" class="sidebar-resizer" title="Drag to resize sidebar"></div>
     </aside>
 
-    <!-- MAIN -->
     <main class="main">
         <header class="topbar">
-            <div class="topbar-left">
-                <button id="mobileMenuButton" class="mobile-menu-button">☰</button>
-                <div>
-                    <div class="breadcrumb">Workspace</div>
-                    <h1 id="pageTitle">Dashboard</h1>
-                </div>
-            </div>
-            <div class="topbar-right">
-                <button class="icon-button" title="Search">⌕</button>
-                <button class="icon-button" title="Notifications">♢</button>
-                <div class="avatar">X</div>
-            </div>
+            <div class="mobile-brand">✦ <strong>Content OS</strong></div>
+            <button id="mobileMenuButton" class="mobile-menu-button" aria-label="Open navigation">☰</button>
+            <nav class="global-nav" aria-label="Main navigation">
+                <a href="#dashboard" class="global-nav-item">Overview</a>
+                <a href="#research" class="global-nav-item">Research</a>
+                <a href="#content" class="global-nav-item">Content</a>
+                <a href="#calendar" class="global-nav-item">Calendar</a>
+                <a href="#analytics" class="global-nav-item">Analytics</a>
+            </nav>
+            <div class="topbar-right"><button class="quick-add-button" id="quickAddButton">+ Add</button><button class="icon-button" title="Search" aria-label="Search">⌕</button><div class="avatar">X</div></div>
         </header>
-
+        <div class="page-context-bar"><div><div class="breadcrumb" id="pageBreadcrumb">Workspace</div><h1 id="pageTitle">Overview</h1></div></div>
         <section id="pageContent" class="page-content"></section>
     </main>
 </div>
 
-<div id="nicheMenu" class="niche-menu hidden">
-    <div class="niche-menu-header"><strong>Select Niche</strong></div>
+<div id="nicheMenu" class="niche-menu hidden"><div class="niche-menu-header"><strong>Select Niche</strong></div></div>
+<div id="quickAddMenu" class="quick-add-menu hidden">
+    <div class="quick-add-menu-header"><strong>Quick Add</strong><span>Add something to your workspace</span></div>
+    <button data-add-type="source"><span>↗</span><div><strong>Source</strong><small>Capture a video or post</small></div></button>
+    <button data-add-type="content"><span>✦</span><div><strong>Content Idea</strong><small>Turn research into an idea</small></div></button>
+    <button data-add-type="creator"><span>◎</span><div><strong>Creator</strong><small>Add a creator to your bank</small></div></button>
+    <button data-add-type="keyword"><span>#</span><div><strong>Keyword</strong><small>Add a discovery keyword</small></div></button>
+    <button data-add-type="product"><span>◇</span><div><strong>Product</strong><small>Add an affiliate product</small></div></button>
+    <button data-add-type="learning"><span>◌</span><div><strong>Learning</strong><small>Record a strategic learning</small></div></button>
 </div>
-
-<script src="js/mock-data.js"></script>
-<script src="js/state.js"></script>
-<script src="js/router.js"></script>
-<script src="js/sidebar.js"></script>
-<script type="module" src="js/app.js"></script>
-
+<script src="js/mock-data.js"></script><script src="js/state.js"></script><script src="js/router.js"></script><script src="js/sidebar.js"></script><script type="module" src="js/app.js"></script>
 </body>
 </html>
