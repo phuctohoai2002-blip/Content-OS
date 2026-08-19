@@ -1,21 +1,43 @@
-<div class="page-header">
+<div class="research-intro">
     <div>
-        <h2>Research</h2>
-        <p class="page-description">Discover creators, sources and keywords.</p>
+        <h2>Research Workspace</h2>
+        <p class="page-description">Capture, classify and evaluate the sources that feed your content system.</p>
     </div>
 </div>
 
-<div class="stat-grid">
-    <div class="stat-card"><div class="stat-label">CREATORS</div><div class="stat-value">182</div></div>
-    <div class="stat-card"><div class="stat-label">SOURCES</div><div class="stat-value">1,247</div></div>
-    <div class="stat-card"><div class="stat-label">KEYWORDS</div><div class="stat-value">486</div></div>
-    <div class="stat-card"><div class="stat-label">TO REVIEW</div><div class="stat-value">42</div></div>
+<div class="quick-capture">
+    <input id="sourceUrlInput" type="url" placeholder="Paste a source URL..." aria-label="Source URL">
+    <button id="captureButton" class="capture-button">Capture</button>
 </div>
 
+<div class="stat-grid research-stats">
+    <div class="stat-card"><div class="stat-label">SOURCES</div><div class="stat-value">128</div></div>
+    <div class="stat-card"><div class="stat-label">CREATORS</div><div class="stat-value">42</div></div>
+    <div class="stat-card"><div class="stat-label">KEYWORDS</div><div class="stat-value">356</div></div>
+    <div class="stat-card"><div class="stat-label">PILLARS</div><div class="stat-value">14</div></div>
+    <div class="stat-card"><div class="stat-label">TOPICS</div><div class="stat-value">68</div></div>
+</div>
+
+<div class="section-heading"><h3>Recent Sources</h3><span>Latest captured research</span></div>
 <div class="card">
-    <div class="empty-state">
-        <div class="empty-state-icon">⌕</div>
-        <strong>Research workspace</strong>
-        <p>Creator Bank, Source Bank and Keyword Bank will be built here.</p>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead><tr><th>Source</th><th>Creator</th><th>Pillar</th><th>Platform</th><th>Status</th><th>Score</th><th>Date Added</th></tr></thead>
+            <tbody>
+                <tr><td><div class="source-title">Why this outfit looks expensive</div><div class="source-subtitle">Fashion analysis</div></td><td>@stylearchive</td><td>Fashion Knowledge</td><td><span class="badge">Douyin</span></td><td><span class="badge">Selected</span></td><td><strong>4.8</strong></td><td>Today</td></tr>
+                <tr><td><div class="source-title">5 details that change an outfit</div><div class="source-subtitle">Styling breakdown</div></td><td>@dailylook</td><td>Styling</td><td><span class="badge">XHS</span></td><td><span class="badge">Reviewing</span></td><td><strong>4.6</strong></td><td>Today</td></tr>
+                <tr><td><div class="source-title">The history behind quiet luxury</div><div class="source-subtitle">Fashion history</div></td><td>@fashionmemo</td><td>Fashion Knowledge</td><td><span class="badge">Douyin</span></td><td><span class="badge">Discovered</span></td><td><strong>4.3</strong></td><td>Yesterday</td></tr>
+                <tr><td><div class="source-title">Why minimal outfits work</div><div class="source-subtitle">Visual principles</div></td><td>@wardrobe_lab</td><td>Minimalism</td><td><span class="badge">TikTok</span></td><td><span class="badge">Selected</span></td><td><strong>4.5</strong></td><td>Yesterday</td></tr>
+            </tbody>
+        </table>
     </div>
+</div>
+
+<div class="section-heading"><h3>Topic Distribution</h3><span>Current research coverage</span></div>
+<div class="card topic-list">
+    <div class="topic-row"><span class="topic-name">Style Inspiration</span><div class="topic-bar"><span style="width:100%"></span></div><span class="topic-count">128</span></div>
+    <div class="topic-row"><span class="topic-name">Outfit Ideas</span><div class="topic-bar"><span style="width:75%"></span></div><span class="topic-count">96</span></div>
+    <div class="topic-row"><span class="topic-name">Luxury</span><div class="topic-bar"><span style="width:66%"></span></div><span class="topic-count">84</span></div>
+    <div class="topic-row"><span class="topic-name">Minimalism</span><div class="topic-bar"><span style="width:49%"></span></div><span class="topic-count">63</span></div>
+    <div class="topic-row"><span class="topic-name">Street Style</span><div class="topic-bar"><span style="width:40%"></span></div><span class="topic-count">51</span></div>
 </div>
