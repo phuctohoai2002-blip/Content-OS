@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { initResearchWorkspace } from "./research.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     initRouter();
@@ -8,6 +9,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.addEventListener("nicheChanged", () => {
         if (window.location.hash.replace("#", "") === "dashboard" || !window.location.hash) {
             initDashboardWorkspace();
+        }
+        if (window.location.hash.replace("#", "") === "research") {
+            window.initResearchWorkspace?.();
         }
     });
 });
@@ -105,9 +109,6 @@ function selectNiche(nicheCode) {
         );
     }
 
-    // Do not fire this on the initial selector setup.
-    // The router already initializes the current page, so firing here would
-    // start a second dashboard request and leave the loading state visible.
     if (changed) {
         window.dispatchEvent(new CustomEvent("nicheChanged", { detail: { nicheCode, nicheId } }));
     }
@@ -141,14 +142,7 @@ async function initDashboardWorkspace() {
         const firstError = [nichesResult, creatorsResult, sourcesResult, readyResult, pillarsResult, recentResult].find(result => result?.error)?.error;
         if (firstError) throw firstError;
 
-        renderDashboardStats({
-            niches: nichesResult.count || 0,
-            creators: creatorsResult.count || 0,
-            sources: sourcesResult.count || 0,
-            ready: readyResult.count || 0,
-            scoped: Boolean(nicheId)
-        });
-
+        renderDashboardStats({ niches: nichesResult.count || 0, creators: creatorsResult.count || 0, sources: sourcesResult.count || 0, ready: readyResult.count || 0, scoped: Boolean(nicheId) });
         const nicheMap = await loadNicheNames();
         renderDashboardPillars(pillarsResult.data || [], nicheMap);
         renderRecentContent(recentResult.data || [], nicheMap);
@@ -165,9 +159,8 @@ async function initDashboardWorkspace() {
     }
 }
 
-// router.js is a classic script, while this file is an ES module.
-// Expose the dashboard initializer so the router can call it after loading the page.
 window.initDashboardWorkspace = initDashboardWorkspace;
+window.initResearchWorkspace = initResearchWorkspace;
 
 async function loadNicheNames() {
     const { data, error } = await supabase.from("niches").select("id,name,niche_code");
@@ -186,97 +179,47 @@ function renderDashboardStats({ niches, creators, sources, ready, scoped }) {
 function renderDashboardPillars(rows, nicheMap) {
     const body = document.getElementById("dashboardPillarsBody");
     if (!body) return;
-
     if (!rows.length) {
         body.innerHTML = '<tr><td colspan="5"><div class="empty-state compact"><strong>No published performance yet</strong><p>Publish some videos to see pillar performance here.</p></div></td></tr>';
         return;
     }
-
     body.innerHTML = rows.map(row => {
         const niche = nicheMap.get(row.niche_id);
-        return `<tr>
-            <td>${escapeHtml(row.pillar_name || "—")}</td>
-            <td>${escapeHtml(niche?.name || "—")}</td>
-            <td>${formatNumber(row.video_count)}</td>
-            <td>${formatNumber(row.total_views)}</td>
-            <td>${formatNumber(row.total_followers)}</td>
-        </tr>`;
+        return `<tr><td>${escapeHtml(row.pillar_name || "—")}</td><td>${escapeHtml(niche?.name || "—")}</td><td>${formatNumber(row.video_count)}</td><td>${formatNumber(row.total_views)}</td><td>${formatNumber(row.total_followers)}</td></tr>`;
     }).join("");
 }
 
 function renderRecentContent(rows, nicheMap) {
     const body = document.getElementById("dashboardRecentBody");
     if (!body) return;
-
     if (!rows.length) {
         body.innerHTML = '<tr><td colspan="4"><div class="empty-state compact"><strong>No content yet</strong><p>Create your first content item from the Content module.</p></div></td></tr>';
         return;
     }
-
     body.innerHTML = rows.map(row => {
         const niche = nicheMap.get(row.niche_id);
         const pillarName = row.pillars?.name || "—";
-        const stage = formatStage(row.stage);
-        return `<tr>
-            <td>${escapeHtml(row.title || "Untitled content")}</td>
-            <td>${escapeHtml(niche?.name || "—")}</td>
-            <td>${escapeHtml(pillarName)}</td>
-            <td><span class="badge">${escapeHtml(stage)}</span></td>
-        </tr>`;
+        return `<tr><td>${escapeHtml(row.title || "Untitled content")}</td><td>${escapeHtml(niche?.name || "—")}</td><td>${escapeHtml(pillarName)}</td><td><span class="badge">${escapeHtml(formatStage(row.stage))}</span></td></tr>`;
     }).join("");
 }
 
-function formatStage(stage) {
-    if (!stage) return "Unknown";
-    return stage.replace(/_/g, " ").replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function formatNumber(value) {
-    const number = Number(value || 0);
-    return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(number);
-}
-
-function setText(id, value) {
-    const element = document.getElementById(id);
-    if (element) element.textContent = value;
-}
-
-function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>'"]/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "'": "&#039;",
-        '"': "&quot;"
-    }[char]));
-}
-
-function getCurrentNicheContext() {
-    const nicheCode = typeof getCurrentNiche === "function" ? getCurrentNiche() : "ALL";
-    const option = document.querySelector(`.niche-option[data-niche="${nicheCode}"]`);
-    return { nicheCode, nicheId: option?.dataset.nicheId || null };
-}
+function formatStage(stage) { return !stage ? "Unknown" : stage.replace(/_/g, " ").replace(/\b\w/g, char => char.toUpperCase()); }
+function formatNumber(value) { return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(Number(value || 0)); }
+function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
+function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#039;", "\"":"&quot;" }[char])); }
+function getCurrentNicheContext() { const nicheCode = typeof getCurrentNiche === "function" ? getCurrentNiche() : "ALL"; const option = document.querySelector(`.niche-option[data-niche="${nicheCode}"]`); return { nicheCode, nicheId: option?.dataset.nicheId || null }; }
 
 function initQuickAdd() {
     const button = document.getElementById("quickAddButton");
     const menu = document.getElementById("quickAddMenu");
     if (!button || !menu) return;
-
-    button.addEventListener("click", event => {
-        event.stopPropagation();
-        menu.classList.toggle("hidden");
-    });
-
+    button.addEventListener("click", event => { event.stopPropagation(); menu.classList.toggle("hidden"); });
     menu.addEventListener("click", event => {
         const item = event.target.closest("button[data-add-type]");
         if (!item) return;
         menu.classList.add("hidden");
-        if (item.dataset.addType === "source") {
-            window.location.hash = "#research";
-            setTimeout(() => document.getElementById("sourceUrlInput")?.focus(), 250);
-        }
+        if (item.dataset.addType === "source") { window.location.hash = "#research"; setTimeout(() => document.getElementById("sourceUrlInput")?.focus(), 250); }
     });
-
     document.addEventListener("click", () => menu.classList.add("hidden"));
 }
 
