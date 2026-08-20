@@ -9,9 +9,9 @@
         </div>
     </div>
 
-    <div class="card" style="display:flex;gap:6px;padding:6px;margin-top:18px;">
-        <button type="button" data-research-type="sources" class="research-tab active" style="padding:9px 14px;border:0;border-radius:9px;background:rgba(167,139,250,.12);color:#655a92;font-size:10px;font-weight:650;cursor:pointer;">↗ Sources</button>
-        <button type="button" data-research-type="creators" class="research-tab" style="padding:9px 14px;border:0;border-radius:9px;background:transparent;color:var(--color-text-secondary);font-size:10px;font-weight:650;cursor:pointer;">◎ Creators</button>
+    <div class="card research-tabs" style="display:flex;gap:6px;padding:6px;margin-top:18px;">
+        <button type="button" data-research-type="sources" class="research-tab active">↗ Sources</button>
+        <button type="button" data-research-type="creators" class="research-tab">◎ Creators</button>
     </div>
 
     <div class="stat-grid research-stats">
@@ -21,32 +21,33 @@
         <div class="stat-card"><div class="stat-label">TOPICS</div><div class="stat-value">68</div><div class="stat-meta">Research topics</div></div>
     </div>
 
-    <div id="researchNotice" class="hidden" style="margin:16px 0;padding:11px 13px;border:1px solid rgba(139,124,235,.2);border-radius:10px;background:rgba(167,139,250,.08);font-size:10px;color:#655a92;"></div>
+    <div id="researchNotice" class="hidden" style="margin:16px 0;padding:11px 13px;border:1px solid rgba(139,124,235,.2);border-radius:10px;background:rgba(167,139,250,.08);font-size:11px;color:#655a92;"></div>
 
     <div class="section-heading"><h3 id="researchFormTitle">Add Source</h3><span>Save directly to Supabase</span></div>
     <div class="card" style="padding:16px;">
         <form id="researchForm">
-            <div id="sourceFields" style="display:grid;grid-template-columns:2fr 1fr 1fr 100px;gap:10px;">
-                <input name="url" type="url" required placeholder="Source URL" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="title" type="text" placeholder="Title" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="platform" type="text" placeholder="Platform" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="score" type="number" min="1" max="5" placeholder="Score" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <select name="status" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;"><option value="discovered">Discovered</option><option value="reviewing">Reviewing</option><option value="selected">Selected</option><option value="downloaded">Downloaded</option><option value="adapted">Adapted</option><option value="rejected">Rejected</option><option value="archived">Archived</option></select>
+            <div id="sourceFields" class="research-fields source-research-fields">
+                <input name="url" type="url" required placeholder="URL">
+                <input name="title" type="text" placeholder="Title">
+                <input name="platform" type="text" placeholder="Platform">
+                <input name="score" type="number" min="1" max="5" placeholder="Score">
+                <select name="status"><option value="discovered">Discovered</option><option value="reviewing">Reviewing</option><option value="selected">Selected</option><option value="downloaded">Downloaded</option><option value="adapted">Adapted</option><option value="rejected">Rejected</option><option value="archived">Archived</option></select>
             </div>
-            <div id="creatorFields" class="hidden" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-                <input name="creator_name" type="text" required placeholder="Creator name" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="handle" type="text" placeholder="Handle / username" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="chinese_name" type="text" placeholder="Chinese name" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="platform" type="text" placeholder="Platform" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="profile_url" type="url" placeholder="Profile URL" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="creator_type" type="text" placeholder="Creator type" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="content_style" type="text" placeholder="Content style" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <input name="download_path" type="text" placeholder="Download path" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
-                <select name="status" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;"><option value="active">Active</option><option value="watching">Watching</option><option value="inactive">Inactive</option></select>
+            <div id="creatorFields" class="research-fields creator-research-fields hidden">
+                <input name="creator_code" type="text" required placeholder="Creator Code">
+                <input name="creator_name" type="text" required placeholder="Creator Name">
+                <input name="platform" type="text" required placeholder="Platform">
+                <select name="niche_id"><option value="">Select Niche</option></select>
+                <input name="handle" type="text" placeholder="Handle / Username">
+                <input name="profile_url" type="url" placeholder="Profile URL">
+                <input name="creator_type" type="text" placeholder="Creator Type">
+                <input name="content_style" type="text" placeholder="Content Style">
+                <input name="download_path" type="text" placeholder="Download Path">
+                <select name="status"><option value="active">Active</option><option value="watching">Watching</option><option value="inactive">Inactive</option></select>
             </div>
             <div style="display:flex;gap:8px;margin-top:12px;">
-                <button id="researchSubmit" type="submit" style="padding:10px 16px;border:0;border-radius:9px;background:#8b7ceb;color:white;cursor:pointer;font-weight:650;">Add Source</button>
-                <button id="researchCancelEdit" type="button" class="hidden" style="padding:10px 16px;border:1px solid var(--color-border);border-radius:9px;background:white;cursor:pointer;">Cancel</button>
+                <button id="researchSubmit" type="submit" class="research-submit">Add Source</button>
+                <button id="researchCancelEdit" type="button" class="research-cancel hidden">Cancel</button>
             </div>
         </form>
     </div>
@@ -54,7 +55,7 @@
     <div class="section-heading"><h3>Research Database</h3><span>Live Supabase data</span></div>
     <div class="card">
         <div style="padding:12px 14px;border-bottom:1px solid var(--color-border);">
-            <input id="researchSearch" type="search" placeholder="Search research..." aria-label="Search research" style="width:100%;max-width:360px;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:11px;outline:none;">
+            <input id="researchSearch" type="search" placeholder="Search research..." aria-label="Search research" class="research-search">
         </div>
         <div class="table-wrapper">
             <table class="data-table">
@@ -62,6 +63,7 @@
                 <tbody id="researchTableBody"><tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">◌</div><strong>Loading research...</strong></div></td></tr></tbody>
             </table>
         </div>
+        <div id="researchPagination" class="research-pagination hidden" aria-label="Research pagination"></div>
     </div>
 
     <div class="section-heading"><h3>Topic Distribution</h3><span>Current research coverage</span></div>
@@ -75,11 +77,26 @@
 
     <style>
         #researchWorkspace .hidden{display:none!important}
+        #researchWorkspace .research-tabs{align-items:center}
+        #researchWorkspace .research-tab{padding:10px 15px;border:0;border-radius:9px;background:transparent;color:var(--color-text-secondary);font-size:12px;font-weight:650;cursor:pointer;transition:.15s ease}
         #researchWorkspace .research-tab.active{background:rgba(167,139,250,.12)!important;color:#655a92!important}
         #researchWorkspace .research-tab:hover{background:rgba(167,139,250,.08)!important}
-        #researchWorkspace #sourceFields{display:grid}
-        #researchWorkspace #creatorFields.hidden{display:none!important}
-        #researchWorkspace input,#researchWorkspace select{box-sizing:border-box;width:100%;font:inherit;font-size:11px;background:#fff;color:var(--color-text)}
-        @media (max-width:900px){#researchWorkspace #sourceFields,#researchWorkspace #creatorFields{grid-template-columns:1fr!important}}
+        #researchWorkspace .research-fields{display:grid;gap:10px}
+        #researchWorkspace .source-research-fields{grid-template-columns:2fr 1fr 1fr 100px}
+        #researchWorkspace .creator-research-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+        #researchWorkspace input,#researchWorkspace select{box-sizing:border-box;width:100%;min-width:0;height:40px;padding:9px 11px;border:1px solid var(--color-border);border-radius:9px;font:inherit;font-size:12px;background:#fff;color:var(--color-text);outline:none}
+        #researchWorkspace input:focus,#researchWorkspace select:focus{border-color:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,.10)}
+        #researchWorkspace .research-submit{padding:10px 17px;border:0;border-radius:9px;background:#8b7ceb;color:white;cursor:pointer;font-size:12px;font-weight:650}
+        #researchWorkspace .research-cancel{padding:10px 17px;border:1px solid var(--color-border);border-radius:9px;background:white;cursor:pointer;font-size:12px}
+        #researchWorkspace .research-search{width:100%;max-width:360px;height:40px;padding:10px 11px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font:inherit;font-size:12px;outline:none}
+        #researchWorkspace .row-actions{white-space:nowrap;display:flex;align-items:center;gap:7px}
+        #researchWorkspace .table-action{min-width:68px;min-height:34px;padding:7px 11px;border:1px solid var(--color-border);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer}
+        #researchWorkspace .table-action.danger{color:#b45353}
+        #researchWorkspace .research-pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:14px;border-top:1px solid var(--color-border)}
+        #researchWorkspace .pagination-button{min-width:34px;height:34px;padding:0 9px;border:1px solid var(--color-border);border-radius:8px;background:#fff;color:var(--color-text);font-size:12px;font-weight:600;cursor:pointer}
+        #researchWorkspace .pagination-button:hover:not(:disabled){background:rgba(167,139,250,.08)}
+        #researchWorkspace .pagination-button.active{background:#8b7ceb;color:#fff;border-color:#8b7ceb}
+        #researchWorkspace .pagination-button:disabled{opacity:.45;cursor:not-allowed}
+        @media (max-width:900px){#researchWorkspace .source-research-fields,#researchWorkspace .creator-research-fields{grid-template-columns:1fr!important}}
     </style>
 </div>
