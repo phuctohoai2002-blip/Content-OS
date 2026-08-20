@@ -5,3 +5,7 @@
 #contextNav .nav-item:hover{background:rgba(167,139,250,.08)}
 .library-add-button{margin-left:auto;white-space:nowrap}
 .add-modal-form .full-width{grid-column:1/-1}
+.taxonomy-tab-list{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.taxonomy-tab-item{display:flex;align-items:center}
+.taxonomy-bulk-all-button{margin-left:auto;white-space:nowrap}
+.taxonomy-bulk-button{white-space:nowrap}
