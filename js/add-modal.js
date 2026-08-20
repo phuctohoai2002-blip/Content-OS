@@ -1,10 +1,25 @@
 import { supabase } from "./supabase.js";
 
-document.addEventListener("DOMContentLoaded",()=>{
- const button=document.getElementById("quickAddButton"),menu=document.getElementById("quickAddMenu"),modal=document.getElementById("addModal");if(!button||!menu||!modal)return;
- button.addEventListener("click",e=>{e.stopPropagation();menu.classList.toggle("hidden")});menu.addEventListener("click",e=>{const b=e.target.closest("[data-add-type]");if(!b)return;menu.classList.add("hidden");open(b.dataset.addType)});
- document.addEventListener("content-os:open-add",e=>open(e.detail||"video"));modal.addEventListener("click",e=>{if(e.target===modal||e.target.closest("[data-close-add-modal]"))close()});
- async function open(type){modal.innerHTML=type==="video"?videoTemplate():type==="creator"?creatorTemplate():type==="product"?productTemplate():await contentTemplate();modal.classList.remove("hidden");modal.setAttribute("aria-hidden","false");bind(type)}
+function initAddModal(){
+ const button=document.getElementById("quickAddButton"),menu=document.getElementById("quickAddMenu"),modal=document.getElementById("addModal");
+ if(!button||!menu||!modal)return;
+ if(modal.dataset.initialized==="true")return;
+ modal.dataset.initialized="true";
+ button.addEventListener("click",e=>{e.stopPropagation();menu.classList.toggle("hidden")});
+ menu.addEventListener("click",e=>{const b=e.target.closest("[data-add-type]");if(!b)return;menu.classList.add("hidden");open(b.dataset.addType)});
+ document.addEventListener("content-os:open-add",e=>{const type=typeof e.detail==="string"?e.detail:e.detail?.type||"video";open(type)});
+ modal.addEventListener("click",e=>{if(e.target===modal||e.target.closest("[data-close-add-modal]"))close()});
+ async function open(type){
+  const normalized=["video","creator","product","content"].includes(type)?type:"video";
+  try{
+   modal.innerHTML=normalized==="video"?videoTemplate():normalized==="creator"?creatorTemplate():normalized==="product"?productTemplate():await contentTemplate();
+   modal.classList.remove("hidden");modal.setAttribute("aria-hidden","false");bind(normalized);
+  }catch(error){
+   console.error("Failed to open add modal:",error);
+   modal.innerHTML=`<div class="add-modal-backdrop"><div class="add-modal-card"><div class="add-modal-header"><div><h2>Could not open form</h2><p>${esc(error?.message||"Unknown error")}</p></div><button type="button" class="add-modal-close" data-close-add-modal>×</button></div></div></div>`;
+   modal.classList.remove("hidden");modal.setAttribute("aria-hidden","false");
+  }
+ }
  function close(){modal.classList.add("hidden");modal.setAttribute("aria-hidden","true");modal.innerHTML=""}
  function bind(type){const form=modal.querySelector("form");if(!form)return;if(type==="video")bindVideo(form);if(type==="content")bindContent(form);if(type==="creator"||type==="product")loadNiches(form);form.addEventListener("submit",async e=>{e.preventDefault();const btn=form.querySelector('button[type="submit"]');btn.disabled=true;try{if(type==="video")await saveVideo(form);else if(type==="creator")await saveCreator(form);else if(type==="product")await saveProduct(form);else await saveContent(form);msg(form,"Saved successfully.",false);document.dispatchEvent(new CustomEvent("content-os:data-changed",{detail:{type}}));setTimeout(close,500)}catch(err){msg(form,err.message||"Could not save record.",true)}finally{btn.disabled=false}})}
  async function bindVideo(form){await loadCreators(form);await loadNiches(form);form.elements.url.addEventListener("input",()=>{form.elements.video_id.value=extractVideoId(form.elements.url.value)});form.elements.video_id.addEventListener("input",()=>{const id=form.elements.video_id.value.trim();if(/^\d+$/.test(id))form.elements.url.value=`https://www.douyin.com/video/${id}`});form.elements.creator_id.addEventListener("change",async()=>{const id=form.elements.creator_id.value;if(!id)return;const {data}=await supabase.from("creators").select("niche_id,download_path").eq("id",id).maybeSingle();if(data){form.elements.niche_id.value=data.niche_id||"";await loadPillars(form,data.niche_id||"");form.elements.download_path.value=data.download_path||""}});form.elements.niche_id.addEventListener("change",()=>loadPillars(form,form.elements.niche_id.value));form.elements.pillar_id.addEventListener("change",()=>loadTopics(form));await loadPillars(form,"");await loadTags(form)}
@@ -28,4 +43,6 @@ document.addEventListener("DOMContentLoaded",()=>{
  function creatorTemplate(){return shell("Add Creator","Creator Code is generated automatically.",`<input type="hidden" name="creator_code"><div class="add-form-grid">${field("Creator Name","creator_name","text",'required placeholder="Creator display name"')}${field("Handle / Username","handle","text",'placeholder="@username"')}${select("Platform","platform",[["Douyin","Douyin"],["Xiaohongshu","Xiaohongshu"],["YouTube","YouTube"],["Instagram","Instagram"],["TikTok","TikTok"]],'required')}${select("Niche","niche_id",[["","Select niche"]],'required')}${field("Profile URL","profile_url","url",'placeholder="https://..."')}${field("Creator Type","creator_type","text",'placeholder="Optional"')}${field("Content Style","content_style","text",'placeholder="Optional"')}${field("Download Path","download_path","text",'placeholder="Shared folder for this creator"')}${select("Status","status",[["active","Active"],["watching","Watching"],["inactive","Inactive"]])}</div>`)}
  function productTemplate(){return shell("Add Product","Save a product/affiliate record.",`<div class="add-form-grid">${field("Product Name","product_name","text",'required placeholder="Product name"')}${field("Category","category","text",'placeholder="Category"')}${field("Brand","brand","text",'placeholder="Brand"')}${field("Platform","platform","text",'placeholder="Platform"')}${select("Niche","niche_id",[["","Select niche"]])}${field("Product URL","product_url","url",'placeholder="https://..."')}${field("Price","price","number",'step="0.01" min="0" placeholder="0"')}${field("Affiliate URL","affiliate_url","url",'placeholder="https://..."')}${field("Commission Rate","commission_rate","number",'step="0.01" min="0" placeholder="0"')}${select("Repeat Purchase","repeat_purchase",[["false","No"],["true","Yes"]])}${field("Affiliate Potential (1–5)","affiliate_potential","number",'min="1" max="5" step="1"')}${select("Status","status",[["active","Active"],["testing","Testing"],["inactive","Inactive"]])}${field("Notes","notes","text",'placeholder="Optional"')}</div>`)}
  async function contentTemplate(){return shell("Add Content","Choose a video already in the editing workflow, then add title, hook, caption and tags.",`<div class="add-form-grid">${select("Video","video_id",[["","Loading videos..."]],'required')}${select("Pillar","pillar_id",[["","Select pillar"]])}${select("Topic","topic_id",[["","Select topic"]])}${field("Title","title","text",'placeholder="Content title"')}${field("Hook","hook","text",'placeholder="Hook"')}<label class="add-field full-width"><span>Caption</span><textarea name="caption" placeholder="Caption"></textarea></label></div><div class="taxonomy-picker"><div class="taxonomy-picker-title">Tags / Hashtags</div><div id="videoTags" class="tag-options"></div></div>`)}
-});
+}
+
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initAddModal,{once:true});else initAddModal();
