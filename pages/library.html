@@ -1,15 +1,9 @@
 <div id="libraryWorkspace">
-  <div class="page-header">
-    <div>
-      <h2>Library</h2>
-      <p class="page-description">Creators, source videos, and content-ready videos in one workspace.</p>
-    </div>
-    <button type="button" class="capture-button" onclick="document.dispatchEvent(new CustomEvent('content-os:open-add',{detail:'video'}))">＋ Add Video</button>
-  </div>
   <div class="card library-tabs" role="tablist">
     <button type="button" class="library-tab active" data-library-view="creators">◎ Creators</button>
     <button type="button" class="library-tab" data-library-view="videos">▶ Videos</button>
     <button type="button" class="library-tab" data-library-view="content">✦ Content</button>
+    <button type="button" class="library-tab" data-library-view="products">◇ Products</button>
   </div>
   <div id="libraryView"></div>
 </div>
