@@ -105,37 +105,51 @@ async function loadRows(root) {
 
 async function insertRow(values) {
     const nicheId = getCurrentNicheId();
+
     const base = activeType === "sources"
         ? { url: values.url?.trim() || "" }
-        : { name: values.name?.trim() || "" };
+        : { creator_name: values.creator_name?.trim() || "" };
+
     if (nicheId) base.niche_id = nicheId;
 
     const optional = activeType === "sources"
-        ? { title: values.title?.trim() || null, platform: values.platform?.trim() || null, status: values.status || null, score: values.score ? Number(values.score) : null }
-        : { handle: values.handle?.trim() || null, platform: values.platform?.trim() || null, status: values.status || null };
+        ? {
+            title: values.title?.trim() || null,
+            platform: values.platform?.trim() || null,
+            status: values.status || null,
+            score: values.score ? Number(values.score) : null
+        }
+        : {
+            handle: values.handle?.trim() || null,
+            chinese_name: values.chinese_name?.trim() || null,
+            profile_url: values.profile_url?.trim() || null,
+            platform: values.platform?.trim() || null,
+            creator_type: values.creator_type?.trim() || null,
+            content_style: values.content_style?.trim() || null,
+            download_path: values.download_path?.trim() || null,
+            status: values.status || "active"
+        };
 
     const fullPayload = { ...base, ...optional };
-    let result = await supabase.from(activeType).insert(fullPayload);
-    if (result.error && looksLikeUnknownColumn(result.error)) {
-        result = await supabase.from(activeType).insert(base);
-    }
-    if (result.error) throw result.error;
+    const { error } = await supabase.from(activeType).insert(fullPayload);
+    if (error) throw error;
 }
 
 async function updateRow(id, values) {
-    const existing = rows.find(row => String(row.id) === String(id));
-    if (!existing) return;
-
     const payload = {};
+
     const keys = activeType === "sources"
         ? ["url", "title", "platform", "status", "score"]
-        : ["name", "handle", "platform", "status"];
+        : ["creator_name", "handle", "chinese_name", "profile_url", "platform", "creator_type", "content_style", "download_path", "status"];
 
     for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(existing, key) && values[key] !== undefined) {
-            payload[key] = key === "score" ? (values[key] ? Number(values[key]) : null) : values[key].trim();
+        if (values[key] !== undefined) {
+            payload[key] = key === "score"
+                ? (values[key] ? Number(values[key]) : null)
+                : (values[key]?.trim?.() || null);
         }
     }
+
     if (!Object.keys(payload).length) throw new Error("No editable fields were found for this record.");
 
     const { error } = await supabase.from(activeType).update(payload).eq("id", id);
@@ -159,11 +173,11 @@ function renderRows(root, search = "") {
 function sourceRow(row) {
     const title = row.title || row.name || "Untitled source";
     const url = row.url || row.source_url || row.link || "";
-    return `<tr><td><div class="source-title">${escapeHtml(title)}</div>${url ? `<a class="source-subtitle" href="${safeUrl(url)}" target="_blank" rel="noopener">${escapeHtml(trimUrl(url))}</a>` : "<div class=\"source-subtitle\">No URL</div>"}</td><td>${escapeHtml(row.creator_name || row.creator || "—")}</td><td><span class="badge">${escapeHtml(row.platform || "—")}</span></td><td><span class="badge">${escapeHtml(row.status || "—")}</span></td><td>${row.score ?? "—"}</td><td>${escapeHtml(formatDate(row.created_at))}</td><td class="row-actions"><button type="button" class="table-action" data-edit-id="${escapeHtml(row.id)}">Edit</button><button type="button" class="table-action danger" data-delete-id="${escapeHtml(row.id)}">Delete</button></td></tr>`;
+    return `<tr><td><div class="source-title">${escapeHtml(title)}</div>${url ? `<a class="source-subtitle" href="${safeUrl(url)}" target="_blank" rel="noopener">${escapeHtml(trimUrl(url))}</a>` : "<div class=\"source-subtitle\">No URL</div>"}</td><td>${escapeHtml(row.creator_name || "—")}</td><td><span class="badge">${escapeHtml(row.platform || "—")}</span></td><td><span class="badge">${escapeHtml(row.status || "—")}</span></td><td>${row.score ?? "—"}</td><td>${escapeHtml(formatDate(row.created_at))}</td><td class="row-actions"><button type="button" class="table-action" data-edit-id="${escapeHtml(row.id)}">Edit</button><button type="button" class="table-action danger" data-delete-id="${escapeHtml(row.id)}">Delete</button></td></tr>`;
 }
 
 function creatorRow(row) {
-    return `<tr><td><div class="source-title">${escapeHtml(row.name || row.display_name || "Unnamed creator")}</div><div class="source-subtitle">${escapeHtml(row.handle || row.username || "—")}</div></td><td><span class="badge">${escapeHtml(row.platform || "—")}</span></td><td><span class="badge">${escapeHtml(row.status || "active")}</span></td><td>${escapeHtml(formatDate(row.created_at))}</td><td colspan="3" class="row-actions"><button type="button" class="table-action" data-edit-id="${escapeHtml(row.id)}">Edit</button><button type="button" class="table-action danger" data-delete-id="${escapeHtml(row.id)}">Delete</button></td></tr>`;
+    return `<tr><td><div class="source-title">${escapeHtml(row.creator_name || "Unnamed creator")}</div><div class="source-subtitle">${escapeHtml(row.handle || row.chinese_name || "—")}</div></td><td><span class="badge">${escapeHtml(row.platform || "—")}</span></td><td><span class="badge">${escapeHtml(row.status || "active")}</span></td><td>${escapeHtml(formatDate(row.created_at))}</td><td colspan="3" class="row-actions"><button type="button" class="table-action" data-edit-id="${escapeHtml(row.id)}">Edit</button><button type="button" class="table-action danger" data-delete-id="${escapeHtml(row.id)}">Delete</button></td></tr>`;
 }
 
 function fillForm(root, row) {
@@ -205,11 +219,6 @@ function getCurrentNicheId() {
     const code = typeof getCurrentNiche === "function" ? getCurrentNiche() : "ALL";
     if (code === "ALL") return null;
     return document.querySelector(`.niche-option[data-niche="${CSS.escape(code)}"]`)?.dataset.nicheId || null;
-}
-
-function looksLikeUnknownColumn(error) {
-    const message = String(error?.message || "").toLowerCase();
-    return message.includes("column") && (message.includes("does not exist") || message.includes("schema cache"));
 }
 
 function showNotice(root, message, error = false) {
