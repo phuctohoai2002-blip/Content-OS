@@ -8,6 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.addEventListener("click", event => { if (event.target === modal || event.target.closest("[data-close-add-modal]")) closeModal(); });
     document.addEventListener("keydown", event => { if (event.key === "Escape" && !modal.classList.contains("hidden")) closeModal(); });
 
+    const style = document.createElement("style");
+    style.textContent = `.add-modal-header h2{font-size:20px}.add-modal-header p{font-size:11px}.add-field{font-size:10px}.add-field input,.add-field select,.add-field textarea{font-size:12px}.creator-lookup-status{font-size:10px}.taxonomy-picker-title{font-size:10px}.tag-option{font-size:10px}.add-form-message{font-size:11px}.add-modal-actions .table-action,.add-modal-actions .capture-button{font-size:11px}`;
+    document.head.appendChild(style);
+
     function openModal(type) { modal.innerHTML = type === "video" ? videoTemplate() : type === "creator" ? creatorTemplate() : productTemplate(); modal.classList.remove("hidden"); modal.setAttribute("aria-hidden", "false"); bindModal(type); }
     function closeModal() { modal.classList.add("hidden"); modal.setAttribute("aria-hidden", "true"); modal.innerHTML = ""; }
     const statusBox = (form, name) => form.querySelector(`[data-status="${name}"]`);
@@ -26,8 +30,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function bindVideoForm(form) {
         const url = form.elements.url, creatorCode = form.elements.creator_code, videoId = form.elements.video_id, niche = form.elements.niche_id;
-        url.addEventListener("input", async () => { videoId.value = extractVideoId(url.value); await validateVideoId(form); });
-        videoId.addEventListener("input", () => validateVideoId(form));
+        url.addEventListener("input", async () => {
+            const id = extractVideoId(url.value);
+            videoId.value = id;
+            if (id) await validateVideoId(form);
+        });
+        videoId.addEventListener("input", async () => {
+            const id = videoId.value.trim();
+            if (/^\d+$/.test(id)) url.value = `https://www.douyin.com/video/${id}`;
+            await validateVideoId(form);
+        });
         creatorCode.addEventListener("blur", () => resolveCreator(form));
         creatorCode.addEventListener("input", () => { form.elements.download_path.value = ""; statusBox(form, "creator").textContent = ""; });
         niche.addEventListener("change", async () => { await loadPillars(form, niche.value); form.elements.topic_id.innerHTML = '<option value="">Select topic</option>'; });
@@ -104,18 +116,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function saveProduct(form) { const payload = { name: form.elements.name.value.trim(), url: form.elements.url.value.trim() || null, platform: form.elements.platform.value.trim() || null, price: form.elements.price.value ? Number(form.elements.price.value) : null, status: form.elements.status.value, niche_id: form.elements.niche_id.value || null, notes: form.elements.notes.value.trim() || null }; if (!payload.name) throw new Error("Product name is required."); await insertWithSchemaFallback("products", payload, [["name","url","platform","price","status","niche_id","notes"],["name","url","platform","status","niche_id"]]); }
-    async function insertWithSchemaFallback(table, payload, keySets) { let lastError = null; for (const keys of keySets) { const candidate = {}; keys.forEach(key => { if (Object.prototype.hasOwnProperty.call(payload,key)) candidate[key] = payload[key]; }); const { error } = await supabase.from(table).insert(candidate); if (!error) return; lastError = error; if (!looksLikeSchemaError(error)) break; } throw lastError || new Error(`Could not save to ${table}.`); }
+    async function insertWithSchemaFallback(table, payload, keySets) { let lastError = null; for (const keys of keySets) { const candidate = {}; keys.forEach(key => { if (Object.prototype.hasOwnProperty.call(payload,key)) candidate[key] = payload[key]); }); const { error } = await supabase.from(table).insert(candidate); if (!error) return; lastError = error; if (!looksLikeSchemaError(error)) break; } throw lastError || new Error(`Could not save to ${table}.`); }
     function creatorMatches(row, code) { const normalized = code.toLowerCase(); return [row.creator_code,row.creator_id,row.channel_id,row.channel_code,row.code].some(value => String(value ?? "").toLowerCase() === normalized); }
     function getDownloadPath(row) { return row.download_path || row.download_folder || row.download_dir || row.save_path || row.storage_path || ""; }
-    function extractVideoId(url) { try { const parsed = new URL(url); const queryId = parsed.searchParams.get("vid") || parsed.searchParams.get("video_id") || parsed.searchParams.get("item_id") || parsed.searchParams.get("aweme_id"); if (queryId) return queryId; const parts = parsed.pathname.split("/").filter(Boolean); return parts.at(-1) || ""; } catch { return ""; } }
+    function extractVideoId(url) {
+        try {
+            const parsed = new URL(url.trim());
+            const modalId = parsed.searchParams.get("modal_id");
+            if (modalId && /^\d+$/.test(modalId)) return modalId;
+            const videoPath = parsed.pathname.match(/\/video\/(\d+)/);
+            if (videoPath?.[1]) return videoPath[1];
+            const queryId = parsed.searchParams.get("vid") || parsed.searchParams.get("video_id") || parsed.searchParams.get("item_id") || parsed.searchParams.get("aweme_id");
+            if (queryId) return queryId;
+            const parts = parsed.pathname.split("/").filter(Boolean);
+            const last = parts.at(-1) || "";
+            return /^\d+$/.test(last) ? last : "";
+        } catch { return ""; }
+    }
     function looksLikeSchemaError(error) { const message = String(error?.message || "").toLowerCase(); return message.includes("column") || message.includes("schema cache") || message.includes("could not find the table"); }
     function showFormMessage(form, message, error) { const box = form.querySelector(".add-form-message"); if (!box) return; box.textContent = message; box.classList.toggle("error", error); box.classList.remove("hidden"); }
     function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'"':"&quot;"}[char])); }
     const field = (label,name,type="text",attrs="") => `<label class="add-field"><span>${label}</span><input name="${name}" type="${type}" ${attrs}></label>`;
-    const select = (label,name,options,attrs="") => `<label class="add-field"><span>${label}</span><select name="${name}" ${attrs}>${options.map(([value,text])=>`<option value="${value}">${text}</option>`).join("")}</select></label>`;
+    const select = (label,name,options,attrs="") => `<label class="add-field"><span>${label}</span><select name="${name}" ${attrs}>${options.map(([value,text])=>`<option value="${value}">${text}</option>`).join("")}</select>`;
     const footer = () => `<div class="add-form-message hidden"></div><div class="add-modal-actions"><button type="button" class="table-action" data-close-add-modal>Cancel</button><button type="submit" class="capture-button">Save</button></div>`;
     const shell = (title,description,body) => `<div class="add-modal-backdrop"><div class="add-modal-card" role="dialog" aria-modal="true"><div class="add-modal-header"><div><h2>${title}</h2><p>${description}</p></div><button type="button" class="add-modal-close" data-close-add-modal>×</button></div><form class="add-modal-form">${body}${footer()}</form></div></div>`;
-    function videoTemplate() { return shell("Add Video","Add a source video and classify it with your content taxonomy.",`<div class="add-form-grid">${field("URL","url","url",'required placeholder="https://..."')}${field("Creator ID","creator_code","text",'required placeholder="Creator channel ID"')}${field("Video ID","video_id","text",'required readonly placeholder="Auto extracted from URL"')}${field("Download Path","download_path","text",'readonly placeholder="Auto from creator database"')}${select("Niche","niche_id",[["","Select niche"]])}${select("Pillar","pillar_id",[["","Select pillar"]])}${select("Topic","topic_id",[["","Select topic"]])}${select("Status","status",[["downloaded","Downloaded"],["editing","Editing"],["ready","Ready"],["scheduled","Scheduled"],["published","Published"]])}</div><div class="taxonomy-picker"><div class="taxonomy-picker-title">Tags</div><div id="videoTags" class="tag-options"></div></div><div class="creator-lookup-status" data-status="creator"></div><div class="creator-lookup-status" data-status="video"></div>`); }
+    function videoTemplate() { return shell("Add Video","Add a source video and classify it with your content taxonomy.",`<div class="add-form-grid">${field("URL","url","url",'required placeholder="https://..."')}${field("Creator ID","creator_code","text",'required placeholder="Creator channel ID"')}${field("Video ID","video_id","text",'required placeholder="Enter or auto-extract video ID"')}${field("Download Path","download_path","text",'readonly placeholder="Auto from creator database"')}${select("Niche","niche_id",[["","Select niche"]])}${select("Pillar","pillar_id",[["","Select pillar"]])}${select("Topic","topic_id",[["","Select topic"]])}${select("Status","status",[["downloaded","Downloaded"],["editing","Editing"],["ready","Ready"],["scheduled","Scheduled"],["published","Published"]])}</div><div class="taxonomy-picker"><div class="taxonomy-picker-title">Tags</div><div id="videoTags" class="tag-options"></div></div><div class="creator-lookup-status" data-status="creator"></div><div class="creator-lookup-status" data-status="video"></div>`); }
     function creatorTemplate() { return shell("Add Creator","Create a creator record for your research and download workflow.",`<div class="add-form-grid">${field("Creator Code","creator_code","text",'required placeholder="Channel ID / creator code"')}${field("Creator Name","creator_name","text",'required placeholder="Creator name"')}${field("Platform","platform","text",'required placeholder="Douyin / XHS / TikTok"')}${select("Niche","niche_id",[["","Select niche"]])}${field("Profile URL","profile_url","url",'placeholder="https://..."')}${field("Creator Type","creator_type","text",'placeholder="Photography / Fashion / ..."')}${field("Download Path","download_path","text",'placeholder="Local download folder"')}${select("Status","status",[["active","Active"],["watching","Watching"],["inactive","Inactive"]])}</div>`); }
     function productTemplate() { return shell("Add Product","Save a product for your affiliate/product research database.",`<div class="add-form-grid">${field("Product Name","name","text",'required placeholder="Product name"')}${field("Product URL","url","url",'placeholder="https://..."')}${field("Platform","platform","text",'placeholder="Shopee / TikTok Shop / ..."')}${field("Price","price","number",'min="0" step="0.01" placeholder="0"')}${select("Status","status",[["active","Active"],["inactive","Inactive"],["testing","Testing"]])}${select("Niche","niche_id",[["","Select niche"]])}<label class="add-field add-field-full"><span>Notes</span><textarea name="notes" rows="3" placeholder="Optional notes"></textarea></label></div>`); }
 });
