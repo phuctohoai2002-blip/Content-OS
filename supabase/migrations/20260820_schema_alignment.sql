@@ -29,19 +29,15 @@ alter table public.tags
     add column if not exists description text,
     add column if not exists updated_at timestamptz not null default now();
 
--- Backfill slugs for existing tags before enforcing uniqueness.
 update public.tags
 set slug = trim(both '-' from regexp_replace(lower(name), '[^a-z0-9]+', '-', 'g'))
 where slug is null or slug = '';
 
--- Make slug required after the backfill.
 alter table public.tags alter column slug set not null;
 
 create unique index if not exists tags_slug_unique_idx on public.tags(slug);
 create unique index if not exists tags_name_lower_idx on public.tags(lower(name));
 
--- The current taxonomy UI does not make the niche code input mandatory.
--- Generate a stable uppercase code when it is omitted.
 create or replace function public.generate_niche_code()
 returns trigger
 language plpgsql
@@ -57,14 +53,13 @@ begin
     end if;
 
     base_code := upper(regexp_replace(btrim(new.name), '[^A-Za-z0-9]+', '', 'g'));
-    if base_code = '' then
-        base_code := 'NICHE';
-    end if;
+    if base_code = '' then base_code := 'NICHE'; end if;
     candidate := left(base_code, 20);
 
     while exists (
         select 1 from public.niches n
-        where n.niche_code = candidate and n.id <> coalesce(new.id, gen_random_uuid())
+        where n.niche_code = candidate
+          and n.id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
     ) loop
         candidate := left(base_code, 17) || lpad(suffix::text, 3, '0');
         suffix := suffix + 1;
@@ -84,9 +79,6 @@ for each row execute function public.generate_niche_code();
 -- 3. VIDEO COMPATIBILITY
 -- ============================================================
 
--- The 20260819 migration referenced video_id, while the current schema
--- uses video_code. Keep video_id as an optional external/platform ID so
--- either version of the app/database remains compatible.
 alter table public.videos
     add column if not exists video_id text;
 
@@ -102,8 +94,13 @@ create index if not exists videos_creator_id_idx on public.videos(creator_id);
 -- ============================================================
 -- 4. DASHBOARD PERFORMANCE VIEWS
 -- ============================================================
+-- PostgreSQL cannot replace a view when the new definition changes
+-- its existing column names/order. Drop the old views first, then recreate.
 
-create or replace view public.pillar_performance as
+drop view if exists public.pillar_performance;
+drop view if exists public.topic_performance;
+
+create view public.pillar_performance as
 select
     v.pillar_id,
     p.name as pillar_name,
@@ -116,7 +113,7 @@ left join public.pillars p on p.id = v.pillar_id
 where v.status = 'published'
 group by v.pillar_id, p.name, v.niche_id;
 
-create or replace view public.topic_performance as
+create view public.topic_performance as
 select
     v.topic_id,
     t.name as topic_name,
@@ -132,7 +129,7 @@ where v.status = 'published'
 group by v.topic_id, t.name, v.niche_id;
 
 -- ============================================================
--- 5. UPDATED_AT TRIGGERS FOR NEW/EDITED RECORDS
+-- 5. UPDATED_AT TRIGGERS
 -- ============================================================
 
 create or replace function public.set_updated_at()
