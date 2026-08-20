@@ -1,6 +1,8 @@
 import { supabase } from "./supabase.js";
+import { initAddModal } from "./add-modal.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+    initAddModal();
     initRouter();
     await initNicheSelector();
     initMobileMenu();
