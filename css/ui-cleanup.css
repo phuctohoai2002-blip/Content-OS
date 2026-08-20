@@ -1,5 +1,6 @@
-/* Global UI cleanup: keep the top context title as the single module title. */
+/* Keep one clean module title in the top context bar. */
 .page-header{display:none!important}
+.breadcrumb{display:none!important}
 #contextNav .nav-item{font:inherit;text-align:left;width:100%;border:0;background:transparent;cursor:pointer}
 #contextNav .nav-item:hover{background:rgba(167,139,250,.08)}
 .library-add-button{margin-left:auto;white-space:nowrap}
