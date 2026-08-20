@@ -1,6 +1,6 @@
 import { supabase } from "./supabase.js";
 
-function initAddModal(){
+export function initAddModal(){
  const button=document.getElementById("quickAddButton"),menu=document.getElementById("quickAddMenu"),modal=document.getElementById("addModal");
  if(!button||!menu||!modal)return;
  if(modal.dataset.initialized==="true")return;
