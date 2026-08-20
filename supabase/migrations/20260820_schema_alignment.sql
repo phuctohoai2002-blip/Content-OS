@@ -1,6 +1,8 @@
 -- Content OS schema alignment
 -- Aligns the existing Supabase schema with the current frontend CRUD/dashboard code.
--- Safe to run after the base schema and the 20260819 taxonomy migration.
+-- IMPORTANT: This migration intentionally does NOT modify the existing
+-- pillar_performance / topic_performance views. Those views already exist
+-- in the database with a richer schema and must be preserved.
 
 begin;
 
@@ -29,14 +31,22 @@ alter table public.tags
     add column if not exists description text,
     add column if not exists updated_at timestamptz not null default now();
 
+-- Backfill slugs for existing tags.
 update public.tags
 set slug = trim(both '-' from regexp_replace(lower(name), '[^a-z0-9]+', '-', 'g'))
 where slug is null or slug = '';
 
 alter table public.tags alter column slug set not null;
 
-create unique index if not exists tags_slug_unique_idx on public.tags(slug);
-create unique index if not exists tags_name_lower_idx on public.tags(lower(name));
+create unique index if not exists tags_slug_unique_idx
+    on public.tags(slug);
+
+create unique index if not exists tags_name_lower_idx
+    on public.tags(lower(name));
+
+-- ============================================================
+-- 3. NICHE CODE COMPATIBILITY
+-- ============================================================
 
 create or replace function public.generate_niche_code()
 returns trigger
@@ -53,13 +63,20 @@ begin
     end if;
 
     base_code := upper(regexp_replace(btrim(new.name), '[^A-Za-z0-9]+', '', 'g'));
-    if base_code = '' then base_code := 'NICHE'; end if;
+    if base_code = '' then
+        base_code := 'NICHE';
+    end if;
+
     candidate := left(base_code, 20);
 
     while exists (
-        select 1 from public.niches n
+        select 1
+        from public.niches n
         where n.niche_code = candidate
-          and n.id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
+          and n.id <> coalesce(
+              new.id,
+              '00000000-0000-0000-0000-000000000000'::uuid
+          )
     ) loop
         candidate := left(base_code, 17) || lpad(suffix::text, 3, '0');
         suffix := suffix + 1;
@@ -71,12 +88,14 @@ end;
 $$;
 
 drop trigger if exists niches_generate_code on public.niches;
+
 create trigger niches_generate_code
 before insert or update of name, niche_code on public.niches
-for each row execute function public.generate_niche_code();
+for each row
+execute function public.generate_niche_code();
 
 -- ============================================================
--- 3. VIDEO COMPATIBILITY
+-- 4. VIDEO COMPATIBILITY
 -- ============================================================
 
 alter table public.videos
@@ -92,44 +111,7 @@ create index if not exists videos_topic_id_idx on public.videos(topic_id);
 create index if not exists videos_creator_id_idx on public.videos(creator_id);
 
 -- ============================================================
--- 4. DASHBOARD PERFORMANCE VIEWS
--- ============================================================
--- PostgreSQL cannot replace a view when the new definition changes
--- its existing column names/order. Drop the old views first, then recreate.
-
-drop view if exists public.pillar_performance;
-drop view if exists public.topic_performance;
-
-create view public.pillar_performance as
-select
-    v.pillar_id,
-    p.name as pillar_name,
-    v.niche_id,
-    count(*)::bigint as video_count,
-    coalesce(sum(v.views), 0)::bigint as total_views,
-    coalesce(sum(v.followers_gained), 0)::bigint as total_followers
-from public.videos v
-left join public.pillars p on p.id = v.pillar_id
-where v.status = 'published'
-group by v.pillar_id, p.name, v.niche_id;
-
-create view public.topic_performance as
-select
-    v.topic_id,
-    t.name as topic_name,
-    v.niche_id,
-    count(*)::bigint as video_count,
-    coalesce(sum(v.views), 0)::bigint as total_views,
-    coalesce(sum(v.likes), 0)::bigint as total_likes,
-    coalesce(sum(v.saves), 0)::bigint as total_saves,
-    coalesce(sum(v.followers_gained), 0)::bigint as total_followers
-from public.videos v
-left join public.topics t on t.id = v.topic_id
-where v.status = 'published'
-group by v.topic_id, t.name, v.niche_id;
-
--- ============================================================
--- 5. UPDATED_AT TRIGGERS
+-- 5. UPDATED_AT TRIGGER FOR TAGS
 -- ============================================================
 
 create or replace function public.set_updated_at()
@@ -143,8 +125,21 @@ end;
 $$;
 
 drop trigger if exists tags_set_updated_at on public.tags;
+
 create trigger tags_set_updated_at
 before update on public.tags
-for each row execute function public.set_updated_at();
+for each row
+execute function public.set_updated_at();
+
+-- ============================================================
+-- 6. EXISTING PERFORMANCE VIEWS
+-- ============================================================
+-- DO NOT CREATE, REPLACE, ALTER, OR DROP these views here.
+-- The database already contains richer definitions for:
+--   public.pillar_performance
+--   public.topic_performance
+--
+-- Keeping them untouched avoids PostgreSQL error 42P16
+-- (cannot drop columns from view) and preserves existing dashboard metrics.
 
 commit;
