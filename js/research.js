@@ -2,6 +2,8 @@ import { supabase } from "./supabase.js";
 
 let activeType = "sources";
 let rows = [];
+let currentPage = 1;
+const PAGE_SIZE = 5;
 
 export async function initResearchCrud() {
     const root = document.getElementById("researchWorkspace");
@@ -12,6 +14,11 @@ export async function initResearchCrud() {
     bindForm(root);
     bindSearch(root);
     bindTableActions(root);
+    window.addEventListener("nicheChanged", () => {
+        currentPage = 1;
+        loadRows(root);
+    });
+    updateFormMode(root);
     await loadRows(root);
 }
 
@@ -19,6 +26,7 @@ function bindTabs(root) {
     root.querySelectorAll("[data-research-type]").forEach(button => {
         button.addEventListener("click", async () => {
             activeType = button.dataset.researchType;
+            currentPage = 1;
             root.querySelectorAll("[data-research-type]").forEach(item => item.classList.toggle("active", item === button));
             updateFormMode(root);
             await loadRows(root);
@@ -35,11 +43,11 @@ function bindForm(root) {
         const id = form.dataset.editId;
         const button = root.querySelector("#researchSubmit");
         if (button) button.disabled = true;
-
         try {
             if (id) await updateRow(id, values);
             else await insertRow(values);
             resetForm(root);
+            currentPage = 1;
             await loadRows(root);
             showNotice(root, id ? "Saved changes." : `Added ${activeType === "sources" ? "source" : "creator"}.`);
         } catch (error) {
@@ -52,11 +60,24 @@ function bindForm(root) {
 }
 
 function bindSearch(root) {
-    root.querySelector("#researchSearch")?.addEventListener("input", event => renderRows(root, event.target.value));
+    root.querySelector("#researchSearch")?.addEventListener("input", event => {
+        currentPage = 1;
+        renderRows(root, event.target.value);
+    });
 }
 
 function bindTableActions(root) {
     root.addEventListener("click", async event => {
+        const pageButton = event.target.closest("[data-page]");
+        if (pageButton) {
+            const page = Number(pageButton.dataset.page);
+            if (Number.isFinite(page) && page >= 1) {
+                currentPage = page;
+                renderRows(root, root.querySelector("#researchSearch")?.value || "");
+            }
+            return;
+        }
+
         const edit = event.target.closest("[data-edit-id]");
         if (edit) {
             const row = rows.find(item => String(item.id) === String(edit.dataset.editId));
@@ -70,6 +91,9 @@ function bindTableActions(root) {
             try {
                 const { error } = await supabase.from(activeType).delete().eq("id", remove.dataset.deleteId);
                 if (error) throw error;
+                const visibleRows = filteredRows(root.querySelector("#researchSearch")?.value || "");
+                const maxPage = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
+                currentPage = Math.min(currentPage, maxPage);
                 await loadRows(root);
             } catch (error) {
                 showNotice(root, error.message || "Could not delete record.", true);
@@ -85,7 +109,7 @@ async function loadRows(root) {
     const loading = root.querySelector("#researchLoading");
     loading?.classList.remove("hidden");
     try {
-        let query = supabase.from(activeType).select("*").order("created_at", { ascending: false }).limit(100);
+        let query = supabase.from(activeType).select("*").order("created_at", { ascending: false }).limit(1000);
         const nicheId = getCurrentNicheId();
         if (nicheId) query = query.eq("niche_id", nicheId);
         const { data, error } = await query;
@@ -97,26 +121,28 @@ async function loadRows(root) {
     } catch (error) {
         rows = [];
         const body = root.querySelector("#researchTableBody");
-        if (body) body.innerHTML = `<tr><td colspan="8"><div class="empty-state compact"><strong>Could not load ${activeType}</strong><p>${escapeHtml(error.message || "Supabase error")}</p></div></td></tr>`;
+        if (body) body.innerHTML = `<tr><td colspan="8"><div class="empty-state compact"><strong>Could not load ${escapeHtml(activeType)}</strong><p>${escapeHtml(error.message || "Supabase error")}</p></div></td></tr>`;
+        renderPagination(root, 0, 1);
     } finally {
         loading?.classList.add("hidden");
     }
 }
 
 async function insertRow(values) {
-    const nicheId = getCurrentNicheId();
-
+    const nicheId = values.niche_id?.trim() || getCurrentNicheId();
     const base = activeType === "sources"
         ? { url: values.url?.trim() || "" }
-        : { creator_name: values.creator_name?.trim() || "" };
-
+        : {
+            creator_code: values.creator_code?.trim() || "",
+            creator_name: values.creator_name?.trim() || ""
+        };
     if (nicheId) base.niche_id = nicheId;
 
     const optional = activeType === "sources"
         ? {
             title: values.title?.trim() || null,
             platform: values.platform?.trim() || null,
-            status: values.status || null,
+            status: values.status || "discovered",
             score: values.score ? Number(values.score) : null
         }
         : {
@@ -130,17 +156,18 @@ async function insertRow(values) {
             status: values.status || "active"
         };
 
-    const fullPayload = { ...base, ...optional };
-    const { error } = await supabase.from(activeType).insert(fullPayload);
+    if (activeType === "creators" && !base.creator_code) throw new Error("Creator Code is required.");
+    if (activeType === "creators" && !base.creator_name) throw new Error("Creator Name is required.");
+
+    const { error } = await supabase.from(activeType).insert({ ...base, ...optional });
     if (error) throw error;
 }
 
 async function updateRow(id, values) {
     const payload = {};
-
     const keys = activeType === "sources"
         ? ["url", "title", "platform", "status", "score"]
-        : ["creator_name", "handle", "chinese_name", "profile_url", "platform", "creator_type", "content_style", "download_path", "status"];
+        : ["creator_code", "creator_name", "handle", "chinese_name", "profile_url", "platform", "creator_type", "content_style", "download_path", "status", "niche_id"];
 
     for (const key of keys) {
         if (values[key] !== undefined) {
@@ -149,25 +176,51 @@ async function updateRow(id, values) {
                 : (values[key]?.trim?.() || null);
         }
     }
-
     if (!Object.keys(payload).length) throw new Error("No editable fields were found for this record.");
 
     const { error } = await supabase.from(activeType).update(payload).eq("id", id);
     if (error) throw error;
 }
 
+function filteredRows(search = "") {
+    const needle = search.trim().toLowerCase();
+    return rows.filter(row => !needle || Object.values(row).some(value => String(value ?? "").toLowerCase().includes(needle)));
+}
+
 function renderRows(root, search = "") {
     const body = root.querySelector("#researchTableBody");
     if (!body) return;
-    const needle = search.trim().toLowerCase();
-    const filtered = rows.filter(row => !needle || Object.values(row).some(value => String(value ?? "").toLowerCase().includes(needle)));
+    const filtered = filteredRows(search);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    currentPage = Math.min(Math.max(currentPage, 1), totalPages);
 
     if (!filtered.length) {
-        body.innerHTML = `<tr><td colspan="8"><div class="empty-state compact"><strong>No ${activeType} found</strong><p>${needle ? "Try another search." : "Your research database is empty."}</p></div></td></tr>`;
+        body.innerHTML = `<tr><td colspan="8"><div class="empty-state compact"><strong>No ${activeType} found</strong><p>${search.trim() ? "Try another search." : "Your research database is empty."}</p></div></td></tr>`;
+        renderPagination(root, 0, 1);
         return;
     }
 
-    body.innerHTML = filtered.map(row => activeType === "sources" ? sourceRow(row) : creatorRow(row)).join("");
+    const start = (currentPage - 1) * PAGE_SIZE;
+    body.innerHTML = filtered.slice(start, start + PAGE_SIZE).map(row => activeType === "sources" ? sourceRow(row) : creatorRow(row)).join("");
+    renderPagination(root, filtered.length, totalPages);
+}
+
+function renderPagination(root, totalItems, totalPages) {
+    const box = root.querySelector("#researchPagination");
+    if (!box) return;
+    if (totalItems <= PAGE_SIZE) {
+        box.innerHTML = "";
+        box.classList.add("hidden");
+        return;
+    }
+    const buttons = [];
+    buttons.push(`<button type="button" class="pagination-button" data-page="${Math.max(1, currentPage - 1)}" ${currentPage === 1 ? "disabled" : ""}>‹</button>`);
+    for (let page = 1; page <= totalPages; page++) {
+        buttons.push(`<button type="button" class="pagination-button ${page === currentPage ? "active" : ""}" data-page="${page}">${page}</button>`);
+    }
+    buttons.push(`<button type="button" class="pagination-button" data-page="${Math.min(totalPages, currentPage + 1)}" ${currentPage === totalPages ? "disabled" : ""}>›</button>`);
+    box.innerHTML = buttons.join("");
+    box.classList.remove("hidden");
 }
 
 function sourceRow(row) {
@@ -210,6 +263,8 @@ function updateFormMode(root) {
     root.querySelector("#researchFormTitle")?.replaceChildren(document.createTextNode(sources ? "Add Source" : "Add Creator"));
     root.querySelector("#sourceFields")?.classList.toggle("hidden", !sources);
     root.querySelector("#creatorFields")?.classList.toggle("hidden", sources);
+    const submit = root.querySelector("#researchSubmit");
+    if (submit) submit.textContent = sources ? "Add Source" : "Add Creator";
     const head = root.querySelector("#researchTableHead");
     if (head) head.innerHTML = sources ? "<tr><th>Source</th><th>Creator</th><th>Platform</th><th>Status</th><th>Score</th><th>Date Added</th><th>Actions</th></tr>" : "<tr><th>Creator</th><th>Platform</th><th>Status</th><th>Date Added</th><th colspan=\"3\">Actions</th></tr>";
     resetForm(root);
