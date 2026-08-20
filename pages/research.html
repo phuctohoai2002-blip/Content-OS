@@ -23,6 +23,34 @@
 
     <div id="researchNotice" class="hidden" style="margin:16px 0;padding:11px 13px;border:1px solid rgba(139,124,235,.2);border-radius:10px;background:rgba(167,139,250,.08);font-size:10px;color:#655a92;"></div>
 
+    <div class="section-heading"><h3 id="researchFormTitle">Add Source</h3><span>Save directly to Supabase</span></div>
+    <div class="card" style="padding:16px;">
+        <form id="researchForm">
+            <div id="sourceFields" style="display:grid;grid-template-columns:2fr 1fr 1fr 100px;gap:10px;">
+                <input name="url" type="url" required placeholder="Source URL" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="title" type="text" placeholder="Title" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="platform" type="text" placeholder="Platform" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="score" type="number" min="1" max="5" placeholder="Score" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <select name="status" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;"><option value="discovered">Discovered</option><option value="reviewing">Reviewing</option><option value="selected">Selected</option><option value="downloaded">Downloaded</option><option value="adapted">Adapted</option><option value="rejected">Rejected</option><option value="archived">Archived</option></select>
+            </div>
+            <div id="creatorFields" class="hidden" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                <input name="creator_name" type="text" required placeholder="Creator name" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="handle" type="text" placeholder="Handle / username" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="chinese_name" type="text" placeholder="Chinese name" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="platform" type="text" placeholder="Platform" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="profile_url" type="url" placeholder="Profile URL" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="creator_type" type="text" placeholder="Creator type" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="content_style" type="text" placeholder="Content style" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <input name="download_path" type="text" placeholder="Download path" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;">
+                <select name="status" style="padding:10px;border:1px solid var(--color-border);border-radius:9px;"><option value="active">Active</option><option value="watching">Watching</option><option value="inactive">Inactive</option></select>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button id="researchSubmit" type="submit" style="padding:10px 16px;border:0;border-radius:9px;background:#8b7ceb;color:white;cursor:pointer;font-weight:650;">Add Source</button>
+                <button id="researchCancelEdit" type="button" class="hidden" style="padding:10px 16px;border:1px solid var(--color-border);border-radius:9px;background:white;cursor:pointer;">Cancel</button>
+            </div>
+        </form>
+    </div>
+
     <div class="section-heading"><h3>Research Database</h3><span>Live Supabase data</span></div>
     <div class="card">
         <div style="padding:12px 14px;border-bottom:1px solid var(--color-border);">
@@ -49,5 +77,9 @@
         #researchWorkspace .hidden{display:none!important}
         #researchWorkspace .research-tab.active{background:rgba(167,139,250,.12)!important;color:#655a92!important}
         #researchWorkspace .research-tab:hover{background:rgba(167,139,250,.08)!important}
+        #researchWorkspace #sourceFields{display:grid}
+        #researchWorkspace #creatorFields.hidden{display:none!important}
+        #researchWorkspace input,#researchWorkspace select{box-sizing:border-box;width:100%;font:inherit;font-size:11px;background:#fff;color:var(--color-text)}
+        @media (max-width:900px){#researchWorkspace #sourceFields,#researchWorkspace #creatorFields{grid-template-columns:1fr!important}}
     </style>
 </div>
