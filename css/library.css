@@ -1,17 +1,11 @@
 /* Library views + slightly larger global typography */
-body{font-size:13px}
-.page-content{font-size:13px}
-.page-description{font-size:13px!important}
+body{font-size:13px}.page-content{font-size:13px}.page-description{font-size:13px!important}
+.sidebar .nav-item,.sidebar .nav-label,.sidebar .niche-selector label,.sidebar .niche-button,.sidebar .system-status,.global-nav-item,.quick-add-button,.icon-button{font-size:13px!important}
 .data-table th{font-size:10px!important}.data-table td{font-size:12px!important}.source-subtitle{font-size:10px!important}.badge,.status-badge{font-size:10px!important}
-.library-tabs{display:flex;gap:6px;padding:6px;margin-bottom:18px;overflow-x:auto}
-.library-tab{padding:11px 17px;border-radius:10px;background:transparent;color:var(--color-text-secondary);font-size:13px;font-weight:650;white-space:nowrap;cursor:pointer}
-.library-tab:hover,.library-tab.active{background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(244,169,200,.14));color:#655a92}
-.library-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-border)}
-.library-toolbar input{width:min(380px,100%);height:42px;padding:10px 13px;border:1px solid var(--color-border);border-radius:10px;background:#fff;color:var(--color-text);font:inherit;font-size:13px;outline:none}
-.library-count{font-size:11px;color:var(--color-text-muted);white-space:nowrap}
-.library-table td{vertical-align:middle}.library-table .path-cell{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary)}
-.library-table a{color:var(--color-primary);text-decoration:none}.library-table a:hover{text-decoration:underline}
-.library-pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:14px;border-top:1px solid var(--color-border)}
-.pagination-button{min-width:36px;height:36px;padding:0 10px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font-size:12px;font-weight:650;cursor:pointer}.pagination-button:hover:not(:disabled){background:rgba(167,139,250,.08)}.pagination-button.active{background:#8b7ceb;color:#fff;border-color:#8b7ceb}.pagination-button:disabled{opacity:.45;cursor:not-allowed}
+.add-modal-card,.add-modal-card input,.add-modal-card select,.add-modal-card textarea,.add-modal-card button,.add-field,.add-field span{font-size:13px!important}.add-modal-header p{font-size:12px!important}.add-modal-header h2{font-size:21px!important}.add-modal-close{font-size:20px!important}
+.library-tabs{display:flex;gap:6px;padding:6px;margin-bottom:18px;overflow-x:auto}.library-tab{padding:11px 17px;border-radius:10px;background:transparent;color:var(--color-text-secondary);font-size:13px;font-weight:650;white-space:nowrap;cursor:pointer}.library-tab:hover,.library-tab.active{background:linear-gradient(135deg,rgba(167,139,250,.12),rgba(244,169,200,.14));color:#655a92}
+.library-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid var(--color-border)}.library-toolbar input{width:min(380px,100%);height:42px;padding:10px 13px;border:1px solid var(--color-border);border-radius:10px;background:#fff;color:var(--color-text);font:inherit;font-size:13px;outline:none}.library-count{font-size:11px;color:var(--color-text-muted);white-space:nowrap}
+.library-table td{vertical-align:middle}.library-table .path-cell{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary)}.library-table a{color:var(--color-primary);text-decoration:none}.library-table a:hover{text-decoration:underline}
+.library-pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:14px;border-top:1px solid var(--color-border)}.pagination-button{min-width:36px;height:36px;padding:0 10px;border:1px solid var(--color-border);border-radius:9px;background:#fff;color:var(--color-text);font-size:12px;font-weight:650;cursor:pointer}.pagination-button:hover:not(:disabled){background:rgba(167,139,250,.08)}.pagination-button.active{background:#8b7ceb;color:#fff;border-color:#8b7ceb}.pagination-button:disabled{opacity:.45;cursor:not-allowed}
 .content-preview{display:block;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary)}.field-missing{color:var(--color-text-muted);font-style:italic}
 @media(max-width:900px){.library-toolbar{align-items:stretch;flex-direction:column}.library-toolbar input{width:100%}}
