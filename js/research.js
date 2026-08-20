@@ -18,6 +18,7 @@ export async function initResearchCrud() {
         currentPage = 1;
         loadRows(root);
     });
+    await loadResearchNiches(root);
     updateFormMode(root);
     await loadRows(root);
 }
@@ -105,6 +106,25 @@ function bindTableActions(root) {
     });
 }
 
+async function loadResearchNiches(root) {
+    const select = root.querySelector("#creatorFields select[name=\"niche_id\"]");
+    if (!select) return;
+    try {
+        const { data, error } = await supabase.from("niches").select("id,name,niche_code").eq("status", "active").order("sort_order", { ascending: true });
+        if (error) throw error;
+        select.innerHTML = '<option value="">Select Niche</option>';
+        (data || []).forEach(niche => {
+            const option = document.createElement("option");
+            option.value = niche.id;
+            option.textContent = `${niche.name} (${niche.niche_code})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Could not load Research niches:", error);
+        select.innerHTML = '<option value="">Niches unavailable</option>';
+    }
+}
+
 async function loadRows(root) {
     const loading = root.querySelector("#researchLoading");
     loading?.classList.remove("hidden");
@@ -132,52 +152,26 @@ async function insertRow(values) {
     const nicheId = values.niche_id?.trim() || getCurrentNicheId();
     const base = activeType === "sources"
         ? { url: values.url?.trim() || "" }
-        : {
-            creator_code: values.creator_code?.trim() || "",
-            creator_name: values.creator_name?.trim() || ""
-        };
+        : { creator_code: values.creator_code?.trim() || "", creator_name: values.creator_name?.trim() || "" };
     if (nicheId) base.niche_id = nicheId;
 
     const optional = activeType === "sources"
-        ? {
-            title: values.title?.trim() || null,
-            platform: values.platform?.trim() || null,
-            status: values.status || "discovered",
-            score: values.score ? Number(values.score) : null
-        }
-        : {
-            handle: values.handle?.trim() || null,
-            chinese_name: values.chinese_name?.trim() || null,
-            profile_url: values.profile_url?.trim() || null,
-            platform: values.platform?.trim() || null,
-            creator_type: values.creator_type?.trim() || null,
-            content_style: values.content_style?.trim() || null,
-            download_path: values.download_path?.trim() || null,
-            status: values.status || "active"
-        };
+        ? { title: values.title?.trim() || null, platform: values.platform?.trim() || null, status: values.status || "discovered", score: values.score ? Number(values.score) : null }
+        : { handle: values.handle?.trim() || null, chinese_name: values.chinese_name?.trim() || null, profile_url: values.profile_url?.trim() || null, platform: values.platform?.trim() || null, creator_type: values.creator_type?.trim() || null, content_style: values.content_style?.trim() || null, download_path: values.download_path?.trim() || null, status: values.status || "active" };
 
     if (activeType === "creators" && !base.creator_code) throw new Error("Creator Code is required.");
     if (activeType === "creators" && !base.creator_name) throw new Error("Creator Name is required.");
-
     const { error } = await supabase.from(activeType).insert({ ...base, ...optional });
     if (error) throw error;
 }
 
 async function updateRow(id, values) {
     const payload = {};
-    const keys = activeType === "sources"
-        ? ["url", "title", "platform", "status", "score"]
-        : ["creator_code", "creator_name", "handle", "chinese_name", "profile_url", "platform", "creator_type", "content_style", "download_path", "status", "niche_id"];
-
+    const keys = activeType === "sources" ? ["url", "title", "platform", "status", "score"] : ["creator_code", "creator_name", "handle", "chinese_name", "profile_url", "platform", "creator_type", "content_style", "download_path", "status", "niche_id"];
     for (const key of keys) {
-        if (values[key] !== undefined) {
-            payload[key] = key === "score"
-                ? (values[key] ? Number(values[key]) : null)
-                : (values[key]?.trim?.() || null);
-        }
+        if (values[key] !== undefined) payload[key] = key === "score" ? (values[key] ? Number(values[key]) : null) : (values[key]?.trim?.() || null);
     }
     if (!Object.keys(payload).length) throw new Error("No editable fields were found for this record.");
-
     const { error } = await supabase.from(activeType).update(payload).eq("id", id);
     if (error) throw error;
 }
@@ -193,13 +187,11 @@ function renderRows(root, search = "") {
     const filtered = filteredRows(search);
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     currentPage = Math.min(Math.max(currentPage, 1), totalPages);
-
     if (!filtered.length) {
         body.innerHTML = `<tr><td colspan="8"><div class="empty-state compact"><strong>No ${activeType} found</strong><p>${search.trim() ? "Try another search." : "Your research database is empty."}</p></div></td></tr>`;
         renderPagination(root, 0, 1);
         return;
     }
-
     const start = (currentPage - 1) * PAGE_SIZE;
     body.innerHTML = filtered.slice(start, start + PAGE_SIZE).map(row => activeType === "sources" ? sourceRow(row) : creatorRow(row)).join("");
     renderPagination(root, filtered.length, totalPages);
@@ -208,16 +200,9 @@ function renderRows(root, search = "") {
 function renderPagination(root, totalItems, totalPages) {
     const box = root.querySelector("#researchPagination");
     if (!box) return;
-    if (totalItems <= PAGE_SIZE) {
-        box.innerHTML = "";
-        box.classList.add("hidden");
-        return;
-    }
-    const buttons = [];
-    buttons.push(`<button type="button" class="pagination-button" data-page="${Math.max(1, currentPage - 1)}" ${currentPage === 1 ? "disabled" : ""}>‹</button>`);
-    for (let page = 1; page <= totalPages; page++) {
-        buttons.push(`<button type="button" class="pagination-button ${page === currentPage ? "active" : ""}" data-page="${page}">${page}</button>`);
-    }
+    if (totalItems <= PAGE_SIZE) { box.innerHTML = ""; box.classList.add("hidden"); return; }
+    const buttons = [`<button type="button" class="pagination-button" data-page="${Math.max(1, currentPage - 1)}" ${currentPage === 1 ? "disabled" : ""}>‹</button>`];
+    for (let page = 1; page <= totalPages; page++) buttons.push(`<button type="button" class="pagination-button ${page === currentPage ? "active" : ""}" data-page="${page}">${page}</button>`);
     buttons.push(`<button type="button" class="pagination-button" data-page="${Math.min(totalPages, currentPage + 1)}" ${currentPage === totalPages ? "disabled" : ""}>›</button>`);
     box.innerHTML = buttons.join("");
     box.classList.remove("hidden");
@@ -237,9 +222,7 @@ function fillForm(root, row) {
     const form = root.querySelector("#researchForm");
     if (!form) return;
     form.dataset.editId = row.id;
-    form.querySelectorAll("[name]").forEach(input => {
-        if (Object.prototype.hasOwnProperty.call(row, input.name)) input.value = row[input.name] ?? "";
-    });
+    form.querySelectorAll("[name]").forEach(input => { if (Object.prototype.hasOwnProperty.call(row, input.name)) input.value = row[input.name] ?? ""; });
     const button = root.querySelector("#researchSubmit");
     if (button) button.textContent = activeType === "sources" ? "Update Source" : "Update Creator";
     root.querySelector("#researchCancelEdit")?.classList.remove("hidden");
@@ -263,6 +246,8 @@ function updateFormMode(root) {
     root.querySelector("#researchFormTitle")?.replaceChildren(document.createTextNode(sources ? "Add Source" : "Add Creator"));
     root.querySelector("#sourceFields")?.classList.toggle("hidden", !sources);
     root.querySelector("#creatorFields")?.classList.toggle("hidden", sources);
+    root.querySelectorAll("#sourceFields [name]").forEach(field => { field.disabled = !sources; });
+    root.querySelectorAll("#creatorFields [name]").forEach(field => { field.disabled = sources; });
     const submit = root.querySelector("#researchSubmit");
     if (submit) submit.textContent = sources ? "Add Source" : "Add Creator";
     const head = root.querySelector("#researchTableHead");
@@ -291,14 +276,6 @@ function formatDate(value) {
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function trimUrl(value) {
-    try { return new URL(value).hostname.replace(/^www\./, ""); } catch { return value; }
-}
-
-function safeUrl(value) {
-    try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) ? escapeHtml(url.href) : "#"; } catch { return "#"; }
-}
-
-function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#039;", '"':"&quot;" }[char]));
-}
+function trimUrl(value) { try { return new URL(value).hostname.replace(/^www\./, ""); } catch { return value; } }
+function safeUrl(value) { try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) ? escapeHtml(url.href) : "#"; } catch { return "#"; } }
+function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#039;", '"':"&quot;" }[char])); }
