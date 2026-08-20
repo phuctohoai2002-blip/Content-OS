@@ -6,7 +6,7 @@
     <title>Content OS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/reset.css"><link rel="stylesheet" href="css/variables.css"><link rel="stylesheet" href="css/layout.css"><link rel="stylesheet" href="css/components.css"><link rel="stylesheet" href="css/add-modal-fix.css">
+    <link rel="stylesheet" href="css/reset.css"><link rel="stylesheet" href="css/variables.css"><link rel="stylesheet" href="css/layout.css"><link rel="stylesheet" href="css/components.css"><link rel="stylesheet" href="css/add-modal-fix.css"><link rel="stylesheet" href="css/library.css">
 </head>
 <body>
 <div id="app">
@@ -18,13 +18,13 @@
         <div id="sidebarResizer" class="sidebar-resizer" title="Drag to resize sidebar"></div>
     </aside>
     <main class="main">
-        <header class="topbar"><div class="mobile-brand">✦ <strong>Content OS</strong></div><button id="mobileMenuButton" class="mobile-menu-button" aria-label="Open navigation">☰</button><nav class="global-nav" aria-label="Main navigation"><a href="#dashboard" class="global-nav-item">Overview</a><a href="#research" class="global-nav-item">Research</a><a href="#content" class="global-nav-item">Content</a><a href="#calendar" class="global-nav-item">Calendar</a><a href="#tracking" class="global-nav-item">Tracking</a><a href="#taxonomy" class="global-nav-item">Taxonomy</a></nav><div class="topbar-right"><button class="quick-add-button" id="quickAddButton">+ Add</button><button class="icon-button" title="Search" aria-label="Search">⌕</button><div class="avatar">X</div></div></header>
+        <header class="topbar"><div class="mobile-brand">✦ <strong>Content OS</strong></div><button id="mobileMenuButton" class="mobile-menu-button" aria-label="Open navigation">☰</button><nav class="global-nav" aria-label="Main navigation"><a href="#dashboard" class="global-nav-item">Overview</a><a href="#library" class="global-nav-item">Library</a><a href="#calendar" class="global-nav-item">Calendar</a><a href="#tracking" class="global-nav-item">Tracking</a><a href="#taxonomy" class="global-nav-item">Taxonomy</a></nav><div class="topbar-right"><button class="quick-add-button" id="quickAddButton">+ Add</button><button class="icon-button" title="Search" aria-label="Search">⌕</button><div class="avatar">X</div></div></header>
         <div class="page-context-bar"><div><div class="breadcrumb" id="pageBreadcrumb">Workspace</div><h1 id="pageTitle">Overview</h1></div></div>
         <section id="pageContent" class="page-content"></section>
     </main>
 </div>
 <div id="nicheMenu" class="niche-menu hidden"><div class="niche-menu-header"><strong>Select Niche</strong></div></div>
-<div id="quickAddMenu" class="quick-add-menu hidden"><div class="quick-add-menu-header"><strong>Add</strong><span>Create a new research or library record</span></div><button type="button" data-add-type="video"><span>▶</span><div><strong>Add Video</strong><small>Add a source video to your library</small></div></button><button type="button" data-add-type="creator"><span>◎</span><div><strong>Add Creator</strong><small>Add a creator to your creator database</small></div></button><button type="button" data-add-type="product"><span>◇</span><div><strong>Add Product</strong><small>Add an affiliate/product record</small></div></button></div>
+<div id="quickAddMenu" class="quick-add-menu hidden"><div class="quick-add-menu-header"><strong>Add</strong><span>Create a new library record</span></div><button type="button" data-add-type="video"><span>▶</span><div><strong>Add Video</strong><small>Record a video in your library</small></div></button><button type="button" data-add-type="creator"><span>◎</span><div><strong>Add Creator</strong><small>Add a creator to your library</small></div></button><button type="button" data-add-type="product"><span>◇</span><div><strong>Add Product</strong><small>Add an affiliate/product record</small></div></button></div>
 <div id="addModal" class="add-modal hidden" aria-hidden="true"></div>
 <script src="js/mock-data.js"></script><script src="js/state.js"></script><script src="js/workspace.js"></script><script src="js/router.js"></script><script src="js/sidebar.js"></script><script type="module" src="js/app.js"></script><script type="module" src="js/creator-code.js"></script><script type="module" src="js/add-modal.js"></script>
 </body>
