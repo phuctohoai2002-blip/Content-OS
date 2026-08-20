@@ -1,23 +1,64 @@
 import { supabase } from "./supabase.js";
 
+let addModalInitialized = false;
+
 export function initAddModal(){
- const button=document.getElementById("quickAddButton"),menu=document.getElementById("quickAddMenu"),modal=document.getElementById("addModal");
- if(!button||!menu||!modal)return;
- if(modal.dataset.initialized==="true")return;
- modal.dataset.initialized="true";
- button.addEventListener("click",e=>{e.stopPropagation();menu.classList.toggle("hidden")});
- menu.addEventListener("click",e=>{const b=e.target.closest("[data-add-type]");if(!b)return;menu.classList.add("hidden");open(b.dataset.addType)});
- document.addEventListener("content-os:open-add",e=>{const type=typeof e.detail==="string"?e.detail:e.detail?.type||"video";open(type)});
- modal.addEventListener("click",e=>{if(e.target===modal||e.target.closest("[data-close-add-modal]"))close()});
+ const modal=document.getElementById("addModal");
+ if(!modal)return;
+ if(addModalInitialized)return;
+ addModalInitialized=true;
+ const menu=document.getElementById("quickAddMenu");
+ const button=document.getElementById("quickAddButton");
+
+ const openFromType=type=>open(type||"video");
+
+ // Use delegated handlers so buttons rendered later by Library still work.
+ document.addEventListener("click",e=>{
+  const quick=e.target.closest?.("#quickAddButton");
+  if(quick){
+   e.preventDefault();e.stopPropagation();
+   const current=document.getElementById("quickAddMenu");
+   if(current)current.classList.toggle("hidden");
+   return;
+  }
+  const addType=e.target.closest?.("[data-add-type]");
+  if(addType){
+   e.preventDefault();e.stopPropagation();
+   document.getElementById("quickAddMenu")?.classList.add("hidden");
+   openFromType(addType.dataset.addType);
+   return;
+  }
+  const libraryAdd=e.target.closest?.("[data-library-add]");
+  if(libraryAdd){
+   e.preventDefault();e.stopPropagation();
+   openFromType(libraryAdd.dataset.libraryAdd);
+  }
+ });
+
+ document.addEventListener("content-os:open-add",e=>{
+  const type=typeof e.detail==="string"?e.detail:e.detail?.type||"video";
+  openFromType(type);
+ });
+
+ modal.addEventListener("click",e=>{
+  if(e.target===modal||e.target.closest?.("[data-close-add-modal]"))close();
+ });
+
+ // Keep these references intentionally unused except as a sanity check for the static shell.
+ void button; void menu;
+
  async function open(type){
   const normalized=["video","creator","product","content"].includes(type)?type:"video";
   try{
    modal.innerHTML=normalized==="video"?videoTemplate():normalized==="creator"?creatorTemplate():normalized==="product"?productTemplate():await contentTemplate();
-   modal.classList.remove("hidden");modal.setAttribute("aria-hidden","false");bind(normalized);
+   modal.classList.remove("hidden");
+   modal.setAttribute("aria-hidden","false");
+   bind(normalized);
   }catch(error){
    console.error("Failed to open add modal:",error);
    modal.innerHTML=`<div class="add-modal-backdrop"><div class="add-modal-card"><div class="add-modal-header"><div><h2>Could not open form</h2><p>${esc(error?.message||"Unknown error")}</p></div><button type="button" class="add-modal-close" data-close-add-modal>×</button></div></div></div>`;
-   modal.classList.remove("hidden");modal.setAttribute("aria-hidden","false");
+   modal.classList.remove("hidden");
+   modal.setAttribute("aria-hidden","false");
   }
  }
  function close(){modal.classList.add("hidden");modal.setAttribute("aria-hidden","true");modal.innerHTML=""}
@@ -45,4 +86,4 @@ export function initAddModal(){
  async function contentTemplate(){return shell("Add Content","Choose a video already in the editing workflow, then add title, hook, caption and tags.",`<div class="add-form-grid">${select("Video","video_id",[["","Loading videos..."]],'required')}${select("Pillar","pillar_id",[["","Select pillar"]])}${select("Topic","topic_id",[["","Select topic"]])}${field("Title","title","text",'placeholder="Content title"')}${field("Hook","hook","text",'placeholder="Hook"')}<label class="add-field full-width"><span>Caption</span><textarea name="caption" placeholder="Caption"></textarea></label></div><div class="taxonomy-picker"><div class="taxonomy-picker-title">Tags / Hashtags</div><div id="videoTags" class="tag-options"></div></div>`)}
 }
 
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initAddModal,{once:true});else initAddModal();
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>initAddModal(),{once:true});else initAddModal();
