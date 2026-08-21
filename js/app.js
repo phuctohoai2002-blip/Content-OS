@@ -1,5 +1,8 @@
 import { supabase } from "./supabase.js";
 import { initAddModal } from "./add-modal.js";
+import { initRouter } from "./router.js";
+import { getCurrentNiche, setCurrentNiche } from "./state.js";
+import "./sidebar.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     initAddModal();
@@ -58,7 +61,7 @@ function renderNicheMenu(niches) {
 function selectNiche(nicheCode) {
     const option = document.querySelector(`.niche-option[data-niche="${nicheCode}"]`);
     if (!option) return;
-    const previousNiche = typeof getCurrentNiche === "function" ? getCurrentNiche() : "ALL";
+    const previousNiche = getCurrentNiche();
     const nicheId = option.dataset.nicheId || null;
     const changed = previousNiche !== nicheCode;
     setCurrentNiche(nicheCode, nicheId);
@@ -112,5 +115,5 @@ function formatStage(stage) { if (!stage) return "Unknown"; return stage.replace
 function formatNumber(value) { const number = Number(value || 0); return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(number); }
 function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#039;", '"':"&quot;" }[char])); }
-function getCurrentNicheContext() { const nicheCode = typeof getCurrentNiche === "function" ? getCurrentNiche() : "ALL"; const option = document.querySelector(`.niche-option[data-niche="${nicheCode}"]`); return { nicheCode, nicheId: option?.dataset.nicheId || null }; }
+function getCurrentNicheContext() { const nicheCode = getCurrentNiche(); const option = document.querySelector(`.niche-option[data-niche="${nicheCode}"]`); return { nicheCode, nicheId: option?.dataset.nicheId || null }; }
 function initMobileMenu() { const button = document.getElementById("mobileMenuButton"); const sidebar = document.getElementById("sidebar"); if (!button || !sidebar) return; button.addEventListener("click", () => sidebar.classList.toggle("open")); }
