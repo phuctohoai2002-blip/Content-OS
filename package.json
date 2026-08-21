@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite",
-    "preview": "vite"
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
