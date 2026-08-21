@@ -5,15 +5,17 @@ const appState = {
     sidebarOpen: false
 };
 
-function setCurrentNiche(nicheCode, nicheId = null) {
+export function setCurrentNiche(nicheCode, nicheId = null) {
     appState.currentNiche = nicheCode || "ALL";
     appState.currentNicheId = nicheId;
 }
 
-function getCurrentNiche() {
+export function getCurrentNiche() {
     return appState.currentNiche;
 }
 
-function getCurrentNicheId() {
+export function getCurrentNicheId() {
     return appState.currentNicheId;
 }
+
+export { appState };
