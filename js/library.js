@@ -1,57 +1,182 @@
 import { supabase } from "./supabase.js";
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 const VIDEO_STATUSES = ["recorded","downloaded","editing","edited","ready","scheduled","published","skipped"];
-const STATUS_LABELS = { recorded:"Recorded",downloaded:"Downloaded",editing:"Editing",edited:"Edited",ready:"Ready",scheduled:"Scheduled",published:"Published",skipped:"Skipped" };
+const STATUS_LABELS = { recorded:"Recorded", downloaded:"Downloaded", editing:"Editing", edited:"Edited", ready:"Ready", scheduled:"Scheduled", published:"Published", skipped:"Skipped" };
 const CONTENT_STATUSES = ["editing","edited","ready","scheduled","published"];
 
-export async function initLibrary(){
- const root=document.getElementById("libraryWorkspace"),view=document.getElementById("libraryView"); if(!root||!view)return;
- let activeView="creators",pages={creators:1,videos:1,content:1,products:1},cache={creators:null,videos:null,content:null,products:null,tags:null},dirty=false;
- root.querySelectorAll("[data-library-view]").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.libraryView)));
- const navHandler=e=>{if(root.isConnected&&["creators","videos","content","products"].includes(e.detail))switchView(e.detail)}; document.addEventListener("content-os:library-view",navHandler);
- const dataHandler=e=>{if(!root.isConnected)return;const t=e.detail?.type;if(t==="creator")cache.creators=null;if(t==="video"||t==="content"){cache.videos=null;cache.content=null}if(t==="product")cache.products=null;render()};document.addEventListener("content-os:data-changed",dataHandler);
- function switchView(v){activeView=v;pages[v]=1;root.querySelectorAll("[data-library-view]").forEach(b=>b.classList.toggle("active",b.dataset.libraryView===v));render()}
- async function load(v){if(cache[v])return cache[v];let result;if(v==="creators")result=await supabase.from("creators").select("id,creator_code,creator_name,handle,platform,niche_id,profile_url,download_path,creator_type,content_style,source_quality,priority,follower_count,notes,status,created_at,niches(name,niche_code)").order("created_at",{ascending:false});else if(v==="products")result=await supabase.from("products").select("id,product_code,niche_id,category,product_name,brand,platform,product_url,price,affiliate_url,commission_rate,repeat_purchase,affiliate_potential,notes,status,created_at,niches(name,niche_code)").order("created_at",{ascending:false});else result=await supabase.from("videos").select("id,video_id,platform,platform_url,title,caption,hook,status,published_at,views,likes,comments,shares,saves,followers_gained,created_at,creator_id,niche_id,pillar_id,topic_id,creators(creator_name,handle,creator_code),niches(name,niche_code),pillars(name,pillar_code),topics(name,topic_code)").order("created_at",{ascending:false});if(result.error)throw result.error;if(v==="creators")cache.creators=result.data||[];else if(v==="products")cache.products=result.data||[];else{cache.videos=result.data||[];cache.content=cache.videos.filter(x=>CONTENT_STATUSES.includes(x.status))}return cache[v]}
- function render(){view.innerHTML='<div class="card"><div class="empty-state"><div class="empty-state-icon">◌</div><strong>Loading...</strong></div></div>';load(activeView).then(renderView).catch(e=>view.innerHTML=`<div class="card"><div class="empty-state"><strong>Could not load ${esc(activeView)}</strong><p>${esc(e.message||"Supabase request failed.")}</p></div></div>`)}
- function renderView(rows){
-   const addType=activeView==="creators"?"creator":activeView==="videos"?"video":activeView==="products"?"product":null;
-   const addLabel=activeView==="creators"?"◎ Add Creator":activeView==="videos"?"▶ Add Video":activeView==="products"?"◇ Add Product":null;
-   const addButton=addType?`<button type="button" class="capture-button library-add-button" data-library-add="${addType}">${addLabel}</button>`:"";
-   const tableContent=activeView==="creators"?creatorTable(rows):activeView==="videos"?videoTable(rows):activeView==="content"?contentTable(rows):productTable(rows);
-   view.innerHTML=`<div class="card"><div class="library-toolbar"><input id="librarySearch" type="search" placeholder="Search ${activeView}..." aria-label="Search ${activeView}"><span class="library-count">${rows.length} records</span>${addButton}</div>${tableContent}</div>`;
-   view.querySelector("#librarySearch")?.addEventListener("input",e=>filter(rows,e.target.value));
-   view.querySelector("[data-library-add]")?.addEventListener("click",e=>document.dispatchEvent(new CustomEvent("content-os:open-add",{detail:e.currentTarget.dataset.libraryAdd})));
-   filter(rows,"")
- }
- function filter(rows,term){const q=term.trim().toLowerCase(),filtered=q?rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q)):rows,total=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));pages[activeView]=Math.min(pages[activeView],total);const chunk=filtered.slice((pages[activeView]-1)*PAGE_SIZE,pages[activeView]*PAGE_SIZE),body=view.querySelector("tbody");if(body)body.innerHTML=activeView==="creators"?creatorRows(chunk):activeView==="videos"?videoRows(chunk):activeView==="content"?contentRows(chunk):productRows(chunk);bindRows();pagination(filtered.length)}
- function creatorTable(r){return table(["Creator","Handle","Platform","Niche","Download Path","Status","Actions"],creatorRows(r.slice(0,PAGE_SIZE)),7)}
- function creatorRows(r){return r.map(x=>`<tr><td><div class="source-title">${esc(x.creator_name||"—")}</div><div class="source-subtitle">${esc(x.creator_code||"")}</div></td><td>${esc(x.handle||"—")}</td><td>${esc(x.platform||"—")}</td><td>${esc(x.niches?.name||"—")}</td><td class="path-cell">${esc(x.download_path||"—")}</td><td>${creatorStatus(x)}</td><td>${actions(x.id,"creator")}</td></tr>`).join("")||empty(7,"No creators yet.")}
- function videoTable(r){return table(["Video","Creator","Niche","Pillar / Topic","Platform","Status","Actions"],videoRows(r.slice(0,PAGE_SIZE)),7)}
- function videoRows(r){return r.map(x=>`<tr><td><div class="source-title">${esc(x.title||x.video_id||"Untitled video")}</div><div class="source-subtitle">${esc(x.video_id||"")} ${x.platform_url?`· <a href="${esc(x.platform_url)}" target="_blank" rel="noreferrer">Open</a>`:""}</div></td><td>${esc(x.creators?.creator_name||"—")}</td><td>${esc(x.niches?.name||"—")}</td><td>${esc(x.pillars?.name||"—")} / ${esc(x.topics?.name||"—")}</td><td>${esc(x.platform||"—")}</td><td>${videoStatus(x)}</td><td>${actions(x.id,"video")}</td></tr>`).join("")||empty(7,"No videos yet.")}
- function contentTable(r){return table(["Video","Creator","Status","Title","Hook","Caption","Tags","Actions"],contentRows(r.slice(0,PAGE_SIZE)),8)}
- function contentRows(r){return r.map(x=>`<tr><td><div class="source-title">${esc(x.video_id||x.title||"Untitled")}</div><div class="source-subtitle">${x.platform_url?`<a href="${esc(x.platform_url)}" target="_blank" rel="noreferrer">Open video</a>`:""}</div></td><td>${esc(x.creators?.creator_name||x.creators?.handle||"—")}</td><td>${videoStatus(x)}</td><td>${editableCell(x.id,"title",x.title,"Double-click to edit title")}</td><td>${editableCell(x.id,"hook",x.hook,"Double-click to edit hook")}</td><td>${editableCell(x.id,"caption",x.caption,"Double-click to edit caption")}</td><td><span class="tag-cell" data-video-tags="${esc(x.id)}">Loading…</span></td><td>${actions(x.id,"video")}</td></tr>`).join("")||empty(8,"No content in the workflow yet.")}
- function editableCell(id,field,value,placeholder){return `<div class="inline-editable" data-inline-edit="true" data-id="${esc(id)}" data-field="${field}" title="${esc(placeholder)}">${value?esc(value):'<span class="field-missing">Not added</span>'}</div>`}
- function productTable(r){return table(["Product","Brand / Category","Platform","Price","Affiliate","Niche","Status","Actions"],productRows(r.slice(0,PAGE_SIZE)),8)}
- function productRows(r){return r.map(x=>`<tr><td><div class="source-title">${esc(x.product_name||"—")}</div><div class="source-subtitle">${esc(x.product_code||"")}</div></td><td>${esc([x.brand,x.category].filter(Boolean).join(" · ")||"—")}</td><td>${esc(x.platform||"—")}</td><td>${x.price==null?"—":esc(x.price)}</td><td>${x.affiliate_url?`<a href="${esc(x.affiliate_url)}" target="_blank" rel="noreferrer">Link</a>`:"—"}</td><td>${esc(x.niches?.name||"—")}</td><td>${productStatus(x)}</td><td>${actions(x.id,"product")}</td></tr>`).join("")||empty(8,"No products yet.")}
- function table(headers,rows,span){return `<div class="table-wrapper"><table class="data-table library-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div><div id="libraryPagination" class="library-pagination"></div>`}
- function actions(id,type){return `<div class="row-actions"><button type="button" class="icon-button edit-record" data-id="${esc(id)}" data-type="${type}" title="Edit">✎</button><button type="button" class="icon-button delete-record" data-id="${esc(id)}" data-type="${type}" title="Delete">×</button></div>`}
- function videoStatus(x){return `<select class="inline-status" data-id="${esc(x.id)}" data-type="video">${VIDEO_STATUSES.map(s=>`<option value="${s}" ${x.status===s?"selected":""}>${STATUS_LABELS[s]}</option>`).join("")}</select>`}
- function creatorStatus(x){return `<select class="inline-status" data-id="${esc(x.id)}" data-type="creator"><option value="active" ${x.status==="active"?"selected":""}>Active</option><option value="watching" ${x.status==="watching"?"selected":""}>Watching</option><option value="inactive" ${x.status==="inactive"?"selected":""}>Inactive</option></select>`}
- function productStatus(x){return `<select class="inline-status" data-id="${esc(x.id)}" data-type="product"><option value="active" ${x.status==="active"?"selected":""}>Active</option><option value="testing" ${x.status==="testing"?"selected":""}>Testing</option><option value="inactive" ${x.status==="inactive"?"selected":""}>Inactive</option></select>`}
- function pagination(total){const box=view.querySelector("#libraryPagination");if(!box)return;const n=Math.ceil(total/PAGE_SIZE);if(n<=1){box.innerHTML="";return}const cur=pages[activeView];box.innerHTML=`<button class="pagination-button" data-page="prev" ${cur===1?"disabled":""}>‹</button>${Array.from({length:n},(_,i)=>`<button class="pagination-button ${i+1===cur?"active":""}" data-page="${i+1}">${i+1}</button>`).join("")}<button class="pagination-button" data-page="next" ${cur===n?"disabled":""}>›</button>`;box.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>{pages[activeView]=b.dataset.page==="prev"?cur-1:b.dataset.page==="next"?cur+1:Number(b.dataset.page);filter(activeView==="creators"?cache.creators:activeView==="videos"?cache.videos:activeView==="content"?cache.content:cache.products,view.querySelector("#librarySearch")?.value||"")})}
- function bindRows(){view.querySelectorAll(".inline-status").forEach(s=>s.onchange=async e=>{const id=e.target.dataset.id,type=e.target.dataset.type,status=e.target.value,table=type==="creator"?"creators":type==="product"?"products":"videos";e.target.disabled=true;const {error}=await supabase.from(table).update({status}).eq("id",id);if(error){alert(error.message);e.target.disabled=false;return}if(type==="video"){const r=cache.videos.find(v=>v.id===id);if(r)r.status=status;cache.content=cache.videos.filter(v=>CONTENT_STATUSES.includes(v.status))}render()});view.querySelectorAll(".edit-record").forEach(b=>b.onclick=()=>openEdit(b.dataset.type,b.dataset.id));view.querySelectorAll(".delete-record").forEach(b=>b.onclick=()=>deleteRecord(b.dataset.type,b.dataset.id));view.querySelectorAll("[data-inline-edit]").forEach(el=>el.ondblclick=()=>startInlineEdit(el));if(activeView==="content")loadContentTags()}
- function startInlineEdit(el){if(el.dataset.editing==="true")return;const id=el.dataset.id,field=el.dataset.field,row=cache.content?.find(x=>x.id===id);if(!row)return;el.dataset.editing="true";const original=row[field]||"",input=field==="caption"?document.createElement("textarea"):document.createElement("input");input.value=original;input.className="inline-edit-input";input.setAttribute("aria-label",`Edit ${field}`);el.innerHTML="";el.appendChild(input);input.focus();input.select?.();let finished=false;const finish=async save=>{if(finished)return;finished=true;input.disabled=true;if(save&&input.value!==original){const {error}=await supabase.from("videos").update({[field]:input.value.trim()||null}).eq("id",id);if(error){alert(`Could not save ${field}: ${error.message}`);render();return}row[field]=input.value.trim()||null}render()};input.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();finish(false)}if(e.key==="Enter"&&!e.shiftKey&&field!=="caption"){e.preventDefault();finish(true)}});input.addEventListener("blur",()=>finish(true))}
- async function loadContentTags(){const cells=[...view.querySelectorAll("[data-video-tags]")];if(!cells.length)return;const {data}=await supabase.from("video_tags").select("video_id,tags(name)").in("video_id",cells.map(c=>c.dataset.videoTags));const grouped={};(data||[]).forEach(x=>(grouped[x.video_id]||=[]).push(x.tags?.name));cells.forEach(c=>c.textContent=(grouped[c.dataset.videoTags]||[]).filter(Boolean).map(x=>`#${x}`).join(" ")||"—")}
- async function openEdit(type,id){const row=type==="creator"?cache.creators.find(x=>x.id===id):type==="product"?cache.products.find(x=>x.id===id):cache.videos.find(x=>x.id===id);if(!row)return;dirty=false;const modal=document.createElement("div");modal.className="library-edit-overlay";modal.innerHTML=type==="creator"?creatorForm(row):type==="product"?productForm(row):await videoForm(row);document.body.appendChild(modal);modal.querySelector("form")?.addEventListener("input",()=>dirty=true);modal.querySelector("[data-close-edit]")?.addEventListener("click",()=>close(modal));modal.querySelector("[data-cancel-edit]")?.addEventListener("click",()=>close(modal));modal.querySelector("form")?.addEventListener("submit",e=>{e.preventDefault();saveEdit(modal,type,id)});if(type==="video")bindTags(modal,row)}
- function shell(title,body){return `<div class="library-edit-modal"><div class="modal-header"><div><h3>${title}</h3></div><button type="button" class="modal-close" data-close-edit>×</button></div><form>${body}<div class="modal-actions"><button type="button" class="button secondary" data-cancel-edit>Cancel</button><button type="submit" class="button primary">Save</button></div></form></div>`}
- function creatorForm(r){return shell("Edit Creator",`<div class="edit-grid"><label>Creator Name<input name="creator_name" value="${attr(r.creator_name)}" required></label><label>Handle / Username<input name="handle" value="${attr(r.handle)}"></label><label>Platform<input name="platform" value="${attr(r.platform)}"></label><label>Profile URL<input name="profile_url" value="${attr(r.profile_url)}"></label><label>Creator Type<input name="creator_type" value="${attr(r.creator_type)}"></label><label>Download Path<input name="download_path" value="${attr(r.download_path)}"></label><label class="full-width">Content Style<textarea name="content_style">${esc(r.content_style||"")}</textarea></label><label class="full-width">Notes<textarea name="notes">${esc(r.notes||"")}</textarea></label></div>`)}
- function productForm(r){return shell("Edit Product",`<div class="edit-grid"><label>Product Name<input name="product_name" value="${attr(r.product_name)}" required></label><label>Category<input name="category" value="${attr(r.category)}"></label><label>Brand<input name="brand" value="${attr(r.brand)}"></label><label>Platform<input name="platform" value="${attr(r.platform)}"></label><label>Product URL<input name="product_url" value="${attr(r.product_url)}"></label><label>Price<input name="price" type="number" step="0.01" value="${attr(r.price)}"></label><label>Affiliate URL<input name="affiliate_url" value="${attr(r.affiliate_url)}"></label><label>Commission Rate<input name="commission_rate" type="number" step="0.01" value="${attr(r.commission_rate)}"></label><label>Repeat Purchase<select name="repeat_purchase"><option value="false" ${!r.repeat_purchase?"selected":""}>No</option><option value="true" ${r.repeat_purchase?"selected":""}>Yes</option></select></label><label>Affiliate Potential<input name="affiliate_potential" type="number" min="1" max="5" value="${attr(r.affiliate_potential)}"></label><label>Status<select name="status"><option value="active" ${r.status==="active"?"selected":""}>Active</option><option value="testing" ${r.status==="testing"?"selected":""}>Testing</option><option value="inactive" ${r.status==="inactive"?"selected":""}>Inactive</option></select></label><label class="full-width">Notes<textarea name="notes">${esc(r.notes||"")}</textarea></label></div>`)}
- async function videoForm(r){const {data:pillars}=await supabase.from("pillars").select("id,name").eq("niche_id",r.niche_id).order("sort_order");const {data:topics}=await supabase.from("topics").select("id,name,pillar_id").eq("niche_id",r.niche_id).order("sort_order");return shell("Edit Video",`<div class="edit-grid"><label>Video ID<input value="${attr(r.video_id)}" disabled></label><label>Video URL<input name="platform_url" value="${attr(r.platform_url)}"></label><label>Title<input name="title" value="${attr(r.title)}"></label><label>Hook<input name="hook" value="${attr(r.hook)}"></label><label>Pillar<select name="pillar_id"><option value="">Select pillar</option>${(pillars||[]).map(p=>`<option value="${p.id}" ${p.id===r.pillar_id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label><label>Topic<select name="topic_id"><option value="">Select topic</option>${(topics||[]).map(t=>`<option value="${t.id}" ${t.id===r.topic_id?"selected":""}>${esc(t.name)}</option>`).join("")}</select></label><label class="full-width">Caption<textarea name="caption">${esc(r.caption||"")}</textarea></label><div class="full-width"><div class="field-label">Tags / Hashtags</div><div class="tag-picker" id="editTagPicker"><div class="tag-chips" data-selected-tags></div><input data-tag-input placeholder="Search or create tag..."><div class="tag-suggestions" data-tag-suggestions></div></div></div></div>`)}
- async function bindTags(modal,row){const picker=modal.querySelector("#editTagPicker"),input=picker?.querySelector("[data-tag-input]"),suggestions=picker?.querySelector("[data-tag-suggestions]"),chips=picker?.querySelector("[data-selected-tags]");if(!picker)return;const {data:tags}=await supabase.from("tags").select("id,name").order("name");const {data:links}=await supabase.from("video_tags").select("tag_id,tags(id,name)").eq("video_id",row.id);const selected=(links||[]).map(x=>x.tags).filter(Boolean),ids=new Set(selected.map(x=>x.id));const draw=()=>{chips.innerHTML=selected.map(t=>`<span class="tag-chip">#${esc(t.name)} <button type="button" data-remove="${t.id}">×</button></span>`).join("");chips.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const i=selected.findIndex(t=>t.id===b.dataset.remove);if(i>=0){ids.delete(selected[i].id);selected.splice(i,1);draw();dirty=true}})};const refresh=()=>{const q=input.value.trim().toLowerCase(),matches=(tags||[]).filter(t=>!ids.has(t.id)&&(!q||t.name.toLowerCase().includes(q))).slice(0,8);suggestions.innerHTML=matches.map(t=>`<button type="button" data-tag="${t.id}">#${esc(t.name)}</button>`).join("")+(q&&!tags?.some(t=>t.name.toLowerCase()===q)?`<button type="button" data-new="${esc(input.value.trim())}">＋ Create #${esc(input.value.trim())}</button>`:"");suggestions.querySelectorAll("[data-tag]").forEach(b=>b.onclick=()=>{const t=tags.find(x=>x.id===b.dataset.tag);selected.push(t);ids.add(t.id);draw();input.value="";refresh();dirty=true});suggestions.querySelector("[data-new]")?.addEventListener("click",async()=>{const name=input.value.trim().replace(/^#/,'');const {data,error}=await supabase.from("tags").insert({name}).select("id,name").single();if(error){alert(error.message);return}tags.push(data);selected.push(data);ids.add(data.id);draw();input.value="";refresh();dirty=true})};draw();input.addEventListener("input",refresh);refresh();modal._tagIds=()=>[...ids]}
- async function saveEdit(modal,type,id){const fd=new FormData(modal.querySelector("form")),payload={};for(const [k,v] of fd.entries())payload[k]=v===""?null:v;if(type==="product"){payload.price=payload.price?Number(payload.price):null;payload.commission_rate=payload.commission_rate?Number(payload.commission_rate):null;payload.affiliate_potential=payload.affiliate_potential?Number(payload.affiliate_potential):null;payload.repeat_purchase=payload.repeat_purchase==="true"}const table=type==="creator"?"creators":type==="product"?"products":"videos",{error}=await supabase.from(table).update(payload).eq("id",id);if(error){alert(error.message);return}if(type==="video"){await supabase.from("video_tags").delete().eq("video_id",id);const ids=modal._tagIds?.()||[];if(ids.length)await supabase.from("video_tags").insert(ids.map(tag_id=>({video_id:id,tag_id})));cache.videos=null;cache.content=null}else if(type==="creator")cache.creators=null;else cache.products=null;dirty=false;modal.remove();render()}
- function close(modal){if(!dirty||window.confirm("Bạn có muốn không lưu những gì đã chỉnh sửa không?")){dirty=false;modal.remove()}}
- async function deleteRecord(type,id){if(!confirm("Bạn có chắc muốn xóa record này không?"))return;const table=type==="creator"?"creators":type==="product"?"products":"videos",{error}=await supabase.from(table).delete().eq("id",id);if(error){alert(error.message);return}if(type==="creator")cache.creators=null;else if(type==="product")cache.products=null;else{cache.videos=null;cache.content=null}render()}
- function attr(v){return esc(v??"")}function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'"':"&quot;"}[c]))}
- render();
+export async function initLibrary() {
+  const root = document.getElementById("libraryWorkspace");
+  const view = document.getElementById("libraryView");
+  if (!root || !view) return;
+
+  let activeView = "creators";
+  let pages = { creators: 1, videos: 1, content: 1, products: 1 };
+  let cache = { creators: null, videos: null, content: null, products: null };
+
+  root.querySelectorAll("[data-library-view]").forEach(button => {
+    button.addEventListener("click", () => switchView(button.dataset.libraryView));
+  });
+  document.addEventListener("content-os:library-view", event => {
+    if (root.isConnected && ["creators", "videos", "content", "products"].includes(event.detail)) switchView(event.detail);
+  });
+  document.addEventListener("content-os:data-changed", event => {
+    if (!root.isConnected) return;
+    const type = event.detail?.type;
+    if (type === "creator") cache.creators = null;
+    if (type === "video" || type === "content") { cache.videos = null; cache.content = null; }
+    if (type === "product") cache.products = null;
+    render();
+  });
+
+  function switchView(viewName) {
+    activeView = viewName;
+    pages[viewName] = 1;
+    root.querySelectorAll("[data-library-view]").forEach(button => button.classList.toggle("active", button.dataset.libraryView === viewName));
+    render();
+  }
+
+  async function load(viewName) {
+    if (cache[viewName]) return cache[viewName];
+
+    let result;
+    if (viewName === "creators") {
+      // Keep this request flat. PostgREST relationship paths can fail when the
+      // generated relationship name differs from the foreign-key relationship.
+      result = await supabase.from("creators").select("id,creator_code,creator_name,handle,platform,niche_id,profile_url,download_path,creator_type,content_style,source_quality,priority,follower_count,notes,status,created_at").order("created_at", { ascending: false });
+    } else if (viewName === "products") {
+      result = await supabase.from("products").select("id,product_code,niche_id,category,product_name,brand,platform,product_url,price,affiliate_url,commission_rate,repeat_purchase,affiliate_potential,notes,status,created_at").order("created_at", { ascending: false });
+    } else {
+      result = await supabase.from("videos").select("id,video_id,platform,platform_url,title,caption,hook,status,published_at,views,likes,comments,shares,saves,followers_gained,created_at,creator_id,niche_id,pillar_id,topic_id").order("created_at", { ascending: false });
+    }
+    if (result.error) throw result.error;
+
+    const rows = result.data || [];
+    if (viewName === "creators") cache.creators = rows;
+    else if (viewName === "products") cache.products = rows;
+    else {
+      cache.videos = rows;
+      cache.content = rows.filter(row => CONTENT_STATUSES.includes(row.status));
+    }
+
+    // Load lookup tables separately; none of these requests uses nested REST paths.
+    if (viewName === "creators" || viewName === "products") {
+      const { data: niches, error } = await supabase.from("niches").select("id,name,niche_code");
+      if (error) throw error;
+      const map = new Map((niches || []).map(n => [n.id, n]));
+      rows.forEach(row => { row.niche = map.get(row.niche_id) || null; });
+    } else {
+      const [creators, niches, pillars, topics] = await Promise.all([
+        supabase.from("creators").select("id,creator_name,handle,creator_code"),
+        supabase.from("niches").select("id,name,niche_code"),
+        supabase.from("pillars").select("id,name,pillar_code"),
+        supabase.from("topics").select("id,name,topic_code")
+      ]);
+      const error = [creators, niches, pillars, topics].find(x => x.error)?.error;
+      if (error) throw error;
+      const maps = {
+        creator: new Map((creators.data || []).map(x => [x.id, x])),
+        niche: new Map((niches.data || []).map(x => [x.id, x])),
+        pillar: new Map((pillars.data || []).map(x => [x.id, x])),
+        topic: new Map((topics.data || []).map(x => [x.id, x]))
+      };
+      rows.forEach(row => {
+        row.creator = maps.creator.get(row.creator_id) || null;
+        row.niche = maps.niche.get(row.niche_id) || null;
+        row.pillar = maps.pillar.get(row.pillar_id) || null;
+        row.topic = maps.topic.get(row.topic_id) || null;
+      });
+    }
+    return cache[viewName];
+  }
+
+  function render() {
+    view.innerHTML = `<div class="card"><div class="empty-state"><div class="empty-state-icon">◌</div><strong>Loading...</strong></div></div>`;
+    load(activeView).then(renderView).catch(error => {
+      console.error(`Could not load ${activeView}:`, error);
+      view.innerHTML = `<div class="card"><div class="empty-state"><strong>Could not load ${esc(activeView)}</strong><p>${esc(error.message || "Supabase request failed.")}</p><small>Check the browser console for the exact Supabase request.</small></div></div>`;
+    });
+  }
+
+  function renderView(rows) {
+    const addType = activeView === "creators" ? "creator" : activeView === "videos" ? "video" : activeView === "products" ? "product" : null;
+    const addLabel = activeView === "creators" ? "◎ Add Creator" : activeView === "videos" ? "▶ Add Video" : activeView === "products" ? "◇ Add Product" : null;
+    const addButton = addType ? `<button type="button" class="capture-button library-add-button" data-library-add="${addType}">${addLabel}</button>` : "";
+    const start = (pages[activeView] - 1) * PAGE_SIZE;
+    const pageRows = rows.slice(start, start + PAGE_SIZE);
+    const table = activeView === "creators" ? creatorTable(pageRows) : activeView === "videos" ? videoTable(pageRows) : activeView === "content" ? contentTable(pageRows) : productTable(pageRows);
+    view.innerHTML = `<div class="card"><div class="library-toolbar"><input id="librarySearch" type="search" placeholder="Search ${activeView}..." aria-label="Search ${activeView}"><span class="library-count">${rows.length} records</span>${addButton}</div>${table}<div id="libraryPagination" class="library-pagination"></div></div>`;
+    view.querySelector("#librarySearch")?.addEventListener("input", event => filterRows(rows, event.target.value));
+    view.querySelector("[data-library-add]")?.addEventListener("click", event => document.dispatchEvent(new CustomEvent("content-os:open-add", { detail: event.currentTarget.dataset.libraryAdd })));
+    bindRows();
+    pagination(rows.length);
+  }
+
+  function filterRows(rows, term) {
+    const q = term.trim().toLowerCase();
+    const filtered = q ? rows.filter(row => JSON.stringify(row).toLowerCase().includes(q)) : rows;
+    const start = (pages[activeView] - 1) * PAGE_SIZE;
+    const pageRows = filtered.slice(start, start + PAGE_SIZE);
+    const body = view.querySelector("tbody");
+    if (body) body.innerHTML = activeView === "creators" ? creatorRows(pageRows) : activeView === "videos" ? videoRows(pageRows) : activeView === "content" ? contentRows(pageRows) : productRows(pageRows);
+    bindRows();
+    pagination(filtered.length);
+  }
+
+  function creatorTable(rows) { return table(["Creator","Handle","Platform","Niche","Download Path","Status","Actions"], creatorRows(rows)); }
+  function creatorRows(rows) { return rows.map(x => `<tr><td><div class="source-title">${esc(x.creator_name || "—")}</div><div class="source-subtitle">${esc(x.creator_code || "")}</div></td><td>${esc(x.handle || "—")}</td><td>${esc(x.platform || "—")}</td><td>${esc(x.niche?.name || "—")}</td><td class="path-cell">${esc(x.download_path || "—")}</td><td>${creatorStatus(x)}</td><td>${actions(x.id,"creator")}</td></tr>`).join("") || empty(7,"No creators yet."); }
+  function videoTable(rows) { return table(["Video","Creator","Niche","Pillar / Topic","Platform","Status","Actions"], videoRows(rows)); }
+  function videoRows(rows) { return rows.map(x => `<tr><td><div class="source-title">${esc(x.title || x.video_id || "Untitled video")}</div><div class="source-subtitle">${esc(x.video_id || "")} ${x.platform_url ? `· <a href="${esc(x.platform_url)}" target="_blank" rel="noreferrer">Open</a>` : ""}</div></td><td>${esc(x.creator?.creator_name || x.creator?.handle || "—")}</td><td>${esc(x.niche?.name || "—")}</td><td>${esc(x.pillar?.name || "—")} / ${esc(x.topic?.name || "—")}</td><td>${esc(x.platform || "—")}</td><td>${videoStatus(x)}</td><td>${actions(x.id,"video")}</td></tr>`).join("") || empty(7,"No videos yet."); }
+  function contentTable(rows) { return table(["Video","Creator","Status","Title","Hook","Caption","Tags","Actions"], contentRows(rows)); }
+  function contentRows(rows) { return rows.map(x => `<tr><td><div class="source-title">${esc(x.video_id || x.title || "Untitled")}</div><div class="source-subtitle">${x.platform_url ? `<a href="${esc(x.platform_url)}" target="_blank" rel="noreferrer">Open video</a>` : ""}</div></td><td>${esc(x.creator?.creator_name || x.creator?.handle || "—")}</td><td>${videoStatus(x)}</td><td>${editableCell(x.id,"title",x.title)}</td><td>${editableCell(x.id,"hook",x.hook)}</td><td>${editableCell(x.id,"caption",x.caption)}</td><td>—</td><td>${actions(x.id,"video")}</td></tr>`).join("") || empty(8,"No content in the workflow yet."); }
+  function productTable(rows) { return table(["Product","Brand / Category","Platform","Price","Affiliate","Niche","Status","Actions"], productRows(rows)); }
+  function productRows(rows) { return rows.map(x => `<tr><td><div class="source-title">${esc(x.product_name || "—")}</div><div class="source-subtitle">${esc(x.product_code || "")}</div></td><td>${esc([x.brand,x.category].filter(Boolean).join(" · ") || "—")}</td><td>${esc(x.platform || "—")}</td><td>${x.price == null ? "—" : esc(x.price)}</td><td>${x.affiliate_url ? `<a href="${esc(x.affiliate_url)}" target="_blank" rel="noreferrer">Link</a>` : "—"}</td><td>${esc(x.niche?.name || "—")}</td><td>${productStatus(x)}</td><td>${actions(x.id,"product")}</td></tr>`).join("") || empty(8,"No products yet."); }
+  function table(headers, rows) { return `<div class="table-wrapper"><table class="data-table library-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`; }
+  function actions(id,type) { return `<div class="row-actions"><button type="button" class="icon-button delete-record" data-id="${esc(id)}" data-type="${type}" title="Delete">×</button></div>`; }
+  function videoStatus(x) { return `<select class="inline-status" data-id="${esc(x.id)}" data-type="video">${VIDEO_STATUSES.map(s => `<option value="${s}" ${x.status === s ? "selected" : ""}>${STATUS_LABELS[s]}</option>`).join("")}</select>`; }
+  function creatorStatus(x) { return `<select class="inline-status" data-id="${esc(x.id)}" data-type="creator"><option value="active" ${x.status === "active" ? "selected" : ""}>Active</option><option value="watching" ${x.status === "watching" ? "selected" : ""}>Watching</option><option value="inactive" ${x.status === "inactive" ? "selected" : ""}>Inactive</option></select>`; }
+  function productStatus(x) { return `<select class="inline-status" data-id="${esc(x.id)}" data-type="product"><option value="active" ${x.status === "active" ? "selected" : ""}>Active</option><option value="testing" ${x.status === "testing" ? "selected" : ""}>Testing</option><option value="inactive" ${x.status === "inactive" ? "selected" : ""}>Inactive</option></select>`; }
+  function editableCell(id,field,value) { return `<div class="inline-editable" data-inline-edit="true" data-id="${esc(id)}" data-field="${field}">${value ? esc(value) : '<span class="field-missing">Not added</span>'}</div>`; }
+
+  function pagination(total) {
+    const box = view.querySelector("#libraryPagination");
+    if (!box) return;
+    const n = Math.ceil(total / PAGE_SIZE);
+    if (n <= 1) { box.innerHTML = ""; return; }
+    const current = pages[activeView];
+    box.innerHTML = `<button class="pagination-button" data-page="prev" ${current === 1 ? "disabled" : ""}>‹</button>${Array.from({length:n}, (_,i) => `<button class="pagination-button ${i+1 === current ? "active" : ""}" data-page="${i+1}">${i+1}</button>`).join("")}<button class="pagination-button" data-page="next" ${current === n ? "disabled" : ""}>›</button>`;
+    box.querySelectorAll("[data-page]").forEach(button => button.onclick = () => {
+      pages[activeView] = button.dataset.page === "prev" ? current - 1 : button.dataset.page === "next" ? current + 1 : Number(button.dataset.page);
+      renderView(cache[activeView]);
+    });
+  }
+
+  function bindRows() {
+    view.querySelectorAll(".inline-status").forEach(select => select.onchange = async event => {
+      const id = event.target.dataset.id;
+      const type = event.target.dataset.type;
+      const tableName = type === "creator" ? "creators" : type === "product" ? "products" : "videos";
+      const { error } = await supabase.from(tableName).update({ status: event.target.value }).eq("id", id);
+      if (error) alert(error.message); else { cache.creators = null; cache.products = null; cache.videos = null; cache.content = null; render(); }
+    });
+    view.querySelectorAll("[data-inline-edit]").forEach(el => el.ondblclick = async () => {
+      const row = cache.content?.find(x => x.id === el.dataset.id);
+      if (!row) return;
+      const field = el.dataset.field;
+      const input = document.createElement(field === "caption" ? "textarea" : "input");
+      input.value = row[field] || "";
+      el.innerHTML = "";
+      el.appendChild(input);
+      input.focus();
+      input.addEventListener("blur", async () => {
+        const { error } = await supabase.from("videos").update({ [field]: input.value.trim() || null }).eq("id", row.id);
+        if (error) alert(error.message); else { cache.videos = null; cache.content = null; render(); }
+      }, { once: true });
+    });
+  }
+
+  render();
 }
+
+function esc(value) { return String(value ?? "").replace(/[&<>\'\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'\"':"&quot;"}[c])); }
+function empty(span, message) { return `<tr><td colspan="${span}"><div class="empty-state">${message}</div></td></tr>`; }
