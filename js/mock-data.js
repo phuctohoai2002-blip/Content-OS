@@ -1,4 +1,4 @@
-const mockData = {
+export const mockData = {
     niches: [
         { id: "ALL", code: "MASTER", name: "All Niches" },
         { id: "FAS", code: "FAS", name: "Fashion" },
