@@ -1,9 +1,11 @@
+import { mockData } from "./mock-data.js";
+
 const STATUS_LABELS = { download:"Download", editing:"Editing", ready:"Ready", scheduled:"Scheduled", published:"Published" };
 
 function statusBadge(status){return `<span class="status-badge status-${status}">${STATUS_LABELS[status]||status}</span>`;}
 function formatNumber(value){return new Intl.NumberFormat("en-US").format(value||0);}
 
-function initContentWorkspace(){
+export function initContentWorkspace(){
     const root=document.getElementById("contentWorkspace");
     if(!root)return;
     let currentFilter="all";
@@ -38,14 +40,14 @@ function initContentWorkspace(){
     }
 }
 
-function initTrackingWorkspace(){
+export function initTrackingWorkspace(){
     const root=document.getElementById("trackingWorkspace"); if(!root)return;
     const published=mockData.videos.filter(v=>v.status==="published");
     const totalViews=published.reduce((s,v)=>s+v.views,0), totalLikes=published.reduce((s,v)=>s+v.likes,0), totalSaves=published.reduce((s,v)=>s+v.saves,0), totalFollowers=published.reduce((s,v)=>s+v.followers,0);
     root.innerHTML=`<div class="stat-grid"><div class="stat-card"><div class="stat-label">PUBLISHED VIDEOS</div><div class="stat-value">${published.length}</div></div><div class="stat-card"><div class="stat-label">TOTAL VIEWS</div><div class="stat-value">${formatNumber(totalViews)}</div></div><div class="stat-card"><div class="stat-label">LIKES</div><div class="stat-value">${formatNumber(totalLikes)}</div></div><div class="stat-card"><div class="stat-label">SAVES</div><div class="stat-value">${formatNumber(totalSaves)}</div></div><div class="stat-card"><div class="stat-label">FOLLOWERS GAINED</div><div class="stat-value">${formatNumber(totalFollowers)}</div></div></div><div class="card"><div class="card-header"><div><h3>Published Videos</h3><span class="card-header-note">Update performance metrics here after publishing.</span></div></div><div class="table-wrapper"><table class="data-table"><thead><tr><th>Video</th><th>Published</th><th>Views</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Saves</th><th>Followers</th></tr></thead><tbody>${published.map(v=>`<tr><td><div class="source-title">${v.title}</div><div class="source-subtitle">${v.pillar} · ${v.topic}</div></td><td>${v.publishedAt}</td><td>${formatNumber(v.views)}</td><td>${formatNumber(v.likes)}</td><td>${formatNumber(v.comments)}</td><td>${formatNumber(v.shares)}</td><td>${formatNumber(v.saves)}</td><td>${formatNumber(v.followers)}</td></tr>`).join("")}</tbody></table></div></div>`;
 }
 
-function initAnalyticsWorkspace(){
+export function initAnalyticsWorkspace(){
     const root=document.getElementById("analyticsWorkspace"); if(!root)return;
     const published=mockData.videos.filter(v=>v.status==="published");
     const groups={}; published.forEach(v=>{groups[v.pillar]??={videos:0,views:0,likes:0,saves:0,followers:0};groups[v.pillar].videos++;groups[v.pillar].views+=v.views;groups[v.pillar].likes+=v.likes;groups[v.pillar].saves+=v.saves;groups[v.pillar].followers+=v.followers;});
