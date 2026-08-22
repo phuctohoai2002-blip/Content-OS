@@ -1,4 +1,6 @@
 import { supabase } from "./supabase.js";
+import { getCurrentNicheId } from "./state.js";
+import { initTaxonomyAddAll } from "./taxonomy-add-all.js";
 
 const TYPES = [
   { key:"niches", label:"Niches", singular:"Niche", table:"niches" },
@@ -13,6 +15,7 @@ export async function initTaxonomy(){
   const root=document.getElementById("taxonomyWorkspace");
   if(!root||root.dataset.initialized==="true")return;
   root.dataset.initialized="true";
+  initTaxonomyAddAll();
   root.querySelectorAll("[data-taxonomy-type]").forEach(btn=>btn.onclick=async()=>{active=btn.dataset.taxonomyType;root.querySelectorAll("[data-taxonomy-type]").forEach(b=>b.classList.toggle("active",b===btn));await load();});
   document.addEventListener("content-os:taxonomy-view",e=>{if(!root.isConnected||!TYPES.some(t=>t.key===e.detail))return;active=e.detail;root.querySelectorAll("[data-taxonomy-type]").forEach(b=>b.classList.toggle("active",b.dataset.taxonomyType===active));load();});
   root.querySelector("#taxonomySearch")?.addEventListener("input",e=>render(e.target.value));
@@ -22,9 +25,11 @@ export async function initTaxonomy(){
 }
 function cfg(){return TYPES.find(t=>t.key===active)||TYPES[0];}
 async function load(){
-  const c=cfg();
+  const c=cfg(),nicheId=getCurrentNicheId();
   try{
     let q=supabase.from(c.table).select("*").limit(300);
+    if(nicheId)q=q.eq("niche_id",nicheId);
+    if(c.table==="niches"&&nicheId)q=supabase.from("niches").select("*").eq("id",nicheId).limit(1);
     q=c.table==="niches"?q.order("sort_order"):q.order("created_at",{ascending:false});
     const {data,error}=await q;if(error)throw error;
     cache=data||[];
@@ -34,73 +39,19 @@ async function load(){
     render(document.getElementById("taxonomySearch")?.value||"");
   }catch(error){cache=[];document.getElementById("taxonomyCount").textContent="0 records";document.getElementById("taxonomyTableBody").innerHTML=`<tr><td colspan="6"><div class="empty-state compact"><strong>Could not load ${esc(c.label)}</strong><p>${esc(error.message||"Supabase request failed.")}</p></div></td></tr>`;}
 }
-function tableHead(type){
-  if(type==="keywords")return "<tr><th>Keyword</th><th>Code</th><th>Context</th><th>Platform</th><th>Status</th><th>Actions</th></tr>";
-  return `<tr><th>Name</th><th>Code / Slug</th><th>Context</th><th>${type==="niches"?"Description":"Status"}</th><th>Date Added</th><th>Actions</th></tr>`;
-}
-function render(search=""){
-  const q=search.trim().toLowerCase(),rows=cache.filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q));
-  document.getElementById("taxonomyTableBody").innerHTML=rows.map(rowHtml).join("")||`<tr><td colspan="6"><div class="empty-state compact"><strong>No ${cfg().label.toLowerCase()} found</strong><p>${q?"Try another search.":`Add your first ${cfg().singular.toLowerCase()}.`}</p></div></td></tr>`;
-}
+function tableHead(type){if(type==="keywords")return "<tr><th>Keyword</th><th>Code</th><th>Context</th><th>Platform</th><th>Status</th><th>Actions</th></tr>";return `<tr><th>Name</th><th>Code / Slug</th><th>Context</th><th>${type==="niches"?"Description":"Status"}</th><th>Date Added</th><th>Actions</th></tr>`;}
+function render(search=""){const q=search.trim().toLowerCase(),rows=cache.filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q));document.getElementById("taxonomyTableBody").innerHTML=rows.map(rowHtml).join("")||`<tr><td colspan="6"><div class="empty-state compact"><strong>No ${cfg().label.toLowerCase()} found</strong><p>${q?"Try another search.":`Add your first ${cfg().singular.toLowerCase()}.`}</p></div></td></tr>`;}
 function context(r){return esc([r.niche_code,r.pillar_code,r.topic_code].filter(Boolean).join(" / ")||r.description||r.vietnamese_meaning||"—");}
-function rowHtml(r){
-  const c=cfg();
-  if(c.table==="keywords")return `<tr><td><div class="source-title" data-tax-inline data-id="${esc(r.id)}" data-field="keyword">${esc(r.keyword||"—")}</div></td><td><div data-tax-inline data-id="${esc(r.id)}" data-field="keyword_code">${esc(r.keyword_code||"—")}</div></td><td>${context(r)}</td><td><div data-tax-inline data-id="${esc(r.id)}" data-field="platform">${esc(r.platform||"—")}</div></td><td>${esc(r.status||"active")}</td><td class="row-actions"><button class="table-action" data-tax-edit="${esc(r.id)}">Edit</button></td></tr>`;
-  return `<tr><td><div class="source-title" data-tax-inline data-id="${esc(r.id)}" data-field="${c.table==="niches"?"name": "name"}">${esc(r.name||"—")}</div></td><td><div data-tax-inline data-id="${esc(r.id)}" data-field="${c.table==="niches"?"niche_code":c.table==="pillars"?"pillar_code":c.table==="topics"?"topic_code":"slug"}">${esc(r.niche_code||r.pillar_code||r.topic_code||r.slug||"—")}</div></td><td>${context(r)}</td><td>${c.table==="niches"?`<div data-tax-inline data-id="${esc(r.id)}" data-field="description">${esc(r.description||"—")}</div>`:`<span class="badge">${esc(r.status||"active")}</span>`}</td><td>${date(r.created_at)}</td><td class="row-actions"><button class="table-action" data-tax-edit="${esc(r.id)}">Edit</button></td></tr>`;
-}
-
-function openModal(editId=null){
-  const current=editId?cache.find(r=>String(r.id)===String(editId)):null,c=cfg(),modal=document.createElement("div");
-  modal.className="library-edit-overlay";
-  modal.innerHTML=modalHtml(c,current);
-  document.body.appendChild(modal);
-  bindModal(modal,c,current);
-}
-function modalHtml(c,row){
-  const v=row||{};
-  const nameLabel=c.table==="keywords"?"Keyword":"Name";
-  const nameValue=c.table==="keywords"?(v.keyword||""):(v.name||"");
-  return `<div class="library-edit-modal"><div class="modal-header"><div><h3>${row?`Edit ${c.singular}`:`Add ${c.singular}`}</h3><p>${row?"Update this taxonomy record.":"Create a taxonomy record or bulk import many records."}</p></div><button class="modal-close" data-close>×</button></div><form><div class="edit-grid">${field(nameLabel,"name",nameValue,true)}${field("Code","code",v.niche_code||v.pillar_code||v.topic_code||v.keyword_code||"")}${parentFields(c,v)}${c.table==="keywords"?field("Category","category",v.category||"")+field("Vietnamese Meaning","meaning",v.vietnamese_meaning||"")+field("Platform","platform",v.platform||""):field("Description","description",v.description||"")}</div><div class="modal-actions"><button type="button" class="button secondary" data-bulk>Bulk Add / Template</button><button type="button" class="button secondary" data-close>Cancel</button><button type="submit" class="button primary">${row?"Save":"Add"}</button></div></form></div>`;
-}
-function parentFields(c,v){
-  let html="";
-  if(["pillars","topics","keywords","tags"].includes(c.table))html+=`<label>Niche<select name="niche_id"><option value="">Select niche</option></select></label>`;
-  if(["topics","keywords","tags"].includes(c.table))html+=`<label>Pillar<select name="pillar_id"><option value="">Select pillar</option></select></label>`;
-  if(["keywords","tags"].includes(c.table))html+=`<label>Topic<select name="topic_id"><option value="">Select topic</option></select></label>`;
-  return html;
-}
-function field(label,name,value,required=false){return `<label>${label}<input name="${name}" value="${esc(value)}" ${required?"required":""}></label>`;}
-async function bindModal(modal,c,current){
-  modal.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>modal.remove());
-  modal.querySelector("[data-bulk]").onclick=()=>{modal.remove();document.dispatchEvent(new CustomEvent("content-os:open-bulk",{detail:{type:c.key}}));};
-  await loadParents(modal,c,current);
-  modal.querySelector("form").onsubmit=async e=>{e.preventDefault();try{await saveForm(new FormData(e.currentTarget),c,current?.id);modal.remove();await load();notice(`${c.singular} saved.`);}catch(error){notice(error.message||"Could not save.",true);}};
-}
-async function loadParents(modal,c,row){
-  const niche=modal.querySelector('[name="niche_id"]'),pillar=modal.querySelector('[name="pillar_id"]'),topic=modal.querySelector('[name="topic_id"]');
-  if(niche){const {data}=await supabase.from("niches").select("id,name,niche_code").eq("status","active").order("sort_order");niche.innerHTML='<option value="">Select niche</option>'+(data||[]).map(x=>`<option value="${esc(x.id)}" ${x.id===row?.niche_id?"selected":""}>${esc(x.name)} (${esc(x.niche_code)})</option>`).join("");}
-  if(pillar){const {data}=await supabase.from("pillars").select("id,name,pillar_code").order("name");pillar.innerHTML='<option value="">Select pillar</option>'+(data||[]).map(x=>`<option value="${esc(x.id)}" ${x.id===row?.pillar_id?"selected":""}>${esc(x.name)} (${esc(x.pillar_code)})</option>`).join("");}
-  if(topic){const {data}=await supabase.from("topics").select("id,name,topic_code").order("name");topic.innerHTML='<option value="">Select topic</option>'+(data||[]).map(x=>`<option value="${esc(x.id)}" ${x.id===row?.topic_id?"selected":""}>${esc(x.name)} (${esc(x.topic_code)})</option>`).join("");}
-}
-async function saveForm(form,c,id){
-  const v=Object.fromEntries(form.entries()),p={};
-  if(c.table==="niches")Object.assign(p,{name:v.name.trim(),niche_code:v.code.trim()||null,description:v.description?.trim()||null,status:"active"});
-  if(c.table==="pillars")Object.assign(p,{name:v.name.trim(),pillar_code:v.code.trim()||`PIL-${Date.now()}`,niche_id:v.niche_id||null,description:v.description?.trim()||null,status:"active"});
-  if(c.table==="topics")Object.assign(p,{name:v.name.trim(),topic_code:v.code.trim()||`TOP-${Date.now()}`,niche_id:v.niche_id||null,pillar_id:v.pillar_id||null,description:v.description?.trim()||null,status:"active"});
-  if(c.table==="keywords")Object.assign(p,{keyword:v.name.trim(),keyword_code:v.code.trim()||`KW-${Date.now()}`,niche_id:v.niche_id||null,pillar_id:v.pillar_id||null,topic_id:v.topic_id||null,category:v.category?.trim()||null,vietnamese_meaning:v.meaning?.trim()||null,platform:v.platform?.trim()||null,status:"active"});
-  if(c.table==="tags")Object.assign(p,{name:v.name.trim(),slug:slugify(v.name),niche_id:v.niche_id||null,pillar_id:v.pillar_id||null,topic_id:v.topic_id||null,description:v.description?.trim()||null});
-  if(!p.name&&!p.keyword)throw new Error(`${c.singular} name is required.`);
-  if(c.table!=="niches"&&!p.niche_id)throw new Error("Niche is required.");
-  const q=id?supabase.from(c.table).update(p).eq("id",id):supabase.from(c.table).insert(p);const {error}=await q;if(error)throw error;
-}
-async function editInline(cell){
-  const c=cfg(),id=cell.dataset.id,fieldName=cell.dataset.field,row=cache.find(r=>String(r.id)===String(id));if(!row)return;
-  const input=document.createElement(fieldName==="description"||fieldName==="vietnamese_meaning"?"textarea":"input");
-  const dbField=fieldName;input.value=row[dbField]||"";cell.replaceChildren(input);input.focus();input.select();let done=false;
-  const save=async()=>{if(done)return;done=true;const value=input.value.trim()||null;const {error}=await supabase.from(c.table).update({[dbField]:value}).eq("id",id);if(error){alert(error.message);render();return;}await load();};
-  input.onblur=save;input.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey)save();if(e.key==="Escape"){done=true;render();}};
-}
-function notice(text,error=false){const box=document.getElementById("taxonomyNotice");if(!box)return;box.textContent=text;box.classList.toggle("error",error);box.classList.remove("hidden");setTimeout(()=>box.classList.add("hidden"),3000);}
-function slugify(v){return String(v||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
-function date(v){if(!v)return"—";const d=new Date(v);return Number.isNaN(d.getTime())?"—":d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
-function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'"':"&quot;"}[c]));}
+function rowHtml(r){const c=cfg();if(c.table==="keywords")return `<tr><td><div class="source-title" data-tax-inline data-id="${esc(r.id)}" data-field="keyword">${esc(r.keyword||"—")}</div></td><td><div data-tax-inline data-id="${esc(r.id)}" data-field="keyword_code">${esc(r.keyword_code||"—")}</div></td><td>${context(r)}</td><td><div data-tax-inline data-id="${esc(r.id)}" data-field="platform">${esc(r.platform||"—")}</div></td><td>${esc(r.status||"active")}</td><td class="row-actions"><button class="table-action" data-tax-edit="${esc(r.id)}">Edit</button></td></tr>`;return `<tr><td><div class="source-title" data-tax-inline data-id="${esc(r.id)}" data-field="name">${esc(r.name||"—")}</div></td><td><div data-tax-inline data-id="${esc(r.id)}" data-field="${c.table==="niches"?"niche_code":c.table==="pillars"?"pillar_code":c.table==="topics"?"topic_code":"slug"}">${esc(r.niche_code||r.pillar_code||r.topic_code||r.slug||"—")}</div></td><td>${context(r)}</td><td>${c.table==="niches"?`<div data-tax-inline data-id="${esc(r.id)}" data-field="description">${esc(r.description||"—")}</div>`:`<span class="badge">${esc(r.status||"active")}</span>`}</td><td>${date(r.created_at)}</td><td class="row-actions"><button class="table-action" data-tax-edit="${esc(r.id)}">Edit</button></td></tr>`}
+function openModal(editId=null){const current=editId?cache.find(r=>String(r.id)===String(editId)):null,c=cfg(),modal=document.createElement("div");modal.className="library-edit-overlay";modal.innerHTML=modalHtml(c,current);document.body.appendChild(modal);bindModal(modal,c,current)}
+function modalHtml(c,row){const v=row||{},nameLabel=c.table==="keywords"?"Keyword":"Name",nameValue=c.table==="keywords"?(v.keyword||""):(v.name||"");return `<div class="library-edit-modal"><div class="modal-header"><div><h3>${row?`Edit ${c.singular}`:`Add ${c.singular}`}</h3><p>${row?"Update this taxonomy record.":"Create a taxonomy record or bulk import many records."}</p></div><button class="modal-close" data-close>×</button></div><form><div class="edit-grid">${field(nameLabel,"name",nameValue,true)}${field("Code","code",v.niche_code||v.pillar_code||v.topic_code||v.keyword_code||"")}${parentFields(c,v)}${c.table==="keywords"?field("Category","category",v.category||"")+field("Vietnamese Meaning","meaning",v.vietnamese_meaning||"")+field("Platform","platform",v.platform||""):field("Description","description",v.description||"")}</div><div class="modal-actions"><button type="button" class="button secondary" data-bulk>Bulk Add / Template</button><button type="button" class="button secondary" data-close>Cancel</button><button type="submit" class="button primary">${row?"Save":"Add"}</button></div></form></div>`}
+function parentFields(c,v){let html="";if(["pillars","topics","keywords","tags"].includes(c.table))html+=`<label>Niche<select name="niche_id"><option value="">Select niche</option></select></label>`;if(["topics","keywords","tags"].includes(c.table))html+=`<label>Pillar<select name="pillar_id"><option value="">Select pillar</option></select></label>`;if(["keywords","tags"].includes(c.table))html+=`<label>Topic<select name="topic_id"><option value="">Select topic</option></select></label>`;return html}
+function field(label,name,value,required=false){return `<label>${label}<input name="${name}" value="${esc(value)}" ${required?"required":""}></label>`}
+async function bindModal(modal,c,current){modal.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>modal.remove());modal.querySelector("[data-bulk]").onclick=()=>{modal.remove();document.dispatchEvent(new CustomEvent("content-os:open-bulk",{detail:{type:c.key}}))};await loadParents(modal,c,current);modal.querySelector("form").onsubmit=async e=>{e.preventDefault();try{await saveForm(new FormData(e.currentTarget),c,current?.id);modal.remove();await load();notice(`${c.singular} saved.`)}catch(error){notice(error.message||"Could not save.",true)}}}
+async function loadParents(modal,c,row){const niche=modal.querySelector('[name="niche_id"]'),pillar=modal.querySelector('[name="pillar_id"]'),topic=modal.querySelector('[name="topic_id"]');if(niche){const {data}=await supabase.from("niches").select("id,name,niche_code").eq("status","active").order("sort_order");niche.innerHTML='<option value="">Select niche</option>'+(data||[]).map(x=>`<option value="${esc(x.id)}" ${x.id===row?.niche_id?"selected":""}>${esc(x.name)} (${esc(x.niche_code)})</option>`).join("")}if(pillar){const {data}=await supabase.from("pillars").select("id,name,pillar_code").order("name");pillar.innerHTML='<option value="">Select pillar</option>'+(data||[]).map(x=>`<option value="${esc(x.id)}" ${x.id===row?.pillar_id?"selected":""}>${esc(x.name)} (${esc(x.pillar_code)})</option>`).join("")}if(topic){const {data}=await supabase.from("topics").select("id,name,topic_code").order("name");topic.innerHTML='<option value="">Select topic</option>'+(data||[]).map(x=>`<option value="${esc(x.id)}" ${x.id===row?.topic_id?"selected":""}>${esc(x.name)} (${esc(x.topic_code)})</option>`).join("")}}
+async function saveForm(form,c,id){const v=Object.fromEntries(form.entries()),p={};if(c.table==="niches")Object.assign(p,{name:v.name.trim(),niche_code:v.code.trim()||null,description:v.description?.trim()||null,status:"active"});if(c.table==="pillars")Object.assign(p,{name:v.name.trim(),pillar_code:v.code.trim()||`PIL-${Date.now()}`,niche_id:v.niche_id||null,description:v.description?.trim()||null,status:"active"});if(c.table==="topics")Object.assign(p,{name:v.name.trim(),topic_code:v.code.trim()||`TOP-${Date.now()}`,niche_id:v.niche_id||null,pillar_id:v.pillar_id||null,description:v.description?.trim()||null,status:"active"});if(c.table==="keywords")Object.assign(p,{keyword:v.name.trim(),keyword_code:v.code.trim()||`KW-${Date.now()}`,niche_id:v.niche_id||null,pillar_id:v.pillar_id||null,topic_id:v.topic_id||null,category:v.category?.trim()||null,vietnamese_meaning:v.meaning?.trim()||null,platform:v.platform?.trim()||null,status:"active"});if(c.table==="tags")Object.assign(p,{name:v.name.trim(),slug:slugify(v.name),niche_id:v.niche_id||null,pillar_id:v.pillar_id||null,topic_id:v.topic_id||null,description:v.description?.trim()||null});if(!p.name&&!p.keyword)throw new Error(`${c.singular} name is required.`);if(c.table!=="niches"&&!p.niche_id)throw new Error("Niche is required.");const q=id?supabase.from(c.table).update(p).eq("id",id):supabase.from(c.table).insert(p);const {error}=await q;if(error)throw error}
+async function editInline(cell){const c=cfg(),id=cell.dataset.id,fieldName=cell.dataset.field,row=cache.find(r=>String(r.id)===String(id));if(!row)return;const input=document.createElement(fieldName==="description"||fieldName==="vietnamese_meaning"?"textarea":"input");input.value=row[fieldName]||"";cell.replaceChildren(input);input.focus();input.select();let done=false;const save=async()=>{if(done)return;done=true;const value=input.value.trim()||null;const {error}=await supabase.from(c.table).update({[fieldName]:value}).eq("id",id);if(error){alert(error.message);render();return}await load()};input.onblur=save;input.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey)save();if(e.key==="Escape"){done=true;render()}}}
+function notice(text,error=false){const box=document.getElementById("taxonomyNotice");if(!box)return;box.textContent=text;box.classList.toggle("error",error);box.classList.remove("hidden");setTimeout(()=>box.classList.add("hidden"),3000)}
+function slugify(v){return String(v||"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}
+function date(v){if(!v)return"—";const d=new Date(v);return Number.isNaN(d.getTime())?"—":d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#039;",'"':"&quot;"}[c]))}
