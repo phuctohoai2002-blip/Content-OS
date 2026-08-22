@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { getCurrentNicheId } from "./state.js";
 
 const METRICS = ["views", "likes", "comments", "shares", "saves", "followers_gained"];
 const METRIC_LABELS = { views: "Views", likes: "Likes", comments: "Comments", shares: "Shares", saves: "Saves", followers_gained: "Followers Gained" };
@@ -22,7 +23,10 @@ export async function initTrackingWorkspace() {
     root.addEventListener("dblclick", event => { const cell = event.target.closest("[data-track-field]"); if (cell) inlineMetric(cell); });
 
     async function load() {
-        const { data, error } = await supabase.from("videos").select("id,video_id,title,status,published_at,views,likes,comments,shares,saves,followers_gained,platform,creator_id,niche_id,pillar_id,topic_id").eq("status", "published").order("published_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
+        const nicheId = getCurrentNicheId();
+        let query = supabase.from("videos").select("id,video_id,title,status,published_at,views,likes,comments,shares,saves,followers_gained,platform,creator_id,niche_id,pillar_id,topic_id").eq("status", "published");
+        if (nicheId) query = query.eq("niche_id", nicheId);
+        const { data, error } = await query.order("published_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
         if (error) throw error;
         rows = data || [];
         const [creators, niches, pillars, topics] = await Promise.all([
@@ -33,21 +37,12 @@ export async function initTrackingWorkspace() {
         ]);
         const lookupError = [creators, niches, pillars, topics].find(result => result.error)?.error;
         if (lookupError) throw lookupError;
-        const maps = {
-            creator: new Map((creators.data || []).map(x => [x.id, x])),
-            niche: new Map((niches.data || []).map(x => [x.id, x])),
-            pillar: new Map((pillars.data || []).map(x => [x.id, x])),
-            topic: new Map((topics.data || []).map(x => [x.id, x]))
-        };
+        const maps = { creator: new Map((creators.data || []).map(x => [x.id, x])), niche: new Map((niches.data || []).map(x => [x.id, x])), pillar: new Map((pillars.data || []).map(x => [x.id, x])), topic: new Map((topics.data || []).map(x => [x.id, x])) };
         rows.forEach(row => { row.creator = maps.creator.get(row.creator_id) || null; row.niche = maps.niche.get(row.niche_id) || null; row.pillar = maps.pillar.get(row.pillar_id) || null; row.topic = maps.topic.get(row.topic_id) || null; });
     }
-
     function render() {
         const needle = search.trim().toLowerCase();
-        const filtered = rows.filter(row => {
-            const matchesFilter = filter === "all" || (filter === "low" ? Number(row.views || 0) < 1000 : Number(row.views || 0) >= 1000);
-            return matchesFilter && (!needle || JSON.stringify(row).toLowerCase().includes(needle));
-        });
+        const filtered = rows.filter(row => { const matchesFilter = filter === "all" || (filter === "low" ? Number(row.views || 0) < 1000 : Number(row.views || 0) >= 1000); return matchesFilter && (!needle || JSON.stringify(row).toLowerCase().includes(needle)); });
         const total = key => rows.reduce((sum, row) => sum + Number(row[key] || 0), 0);
         const avgViews = rows.length ? Math.round(total("views") / rows.length) : 0;
         const pageRows = filtered.slice(0, PAGE_SIZE);
@@ -55,7 +50,7 @@ export async function initTrackingWorkspace() {
         root.querySelector("#trackingFilter").onchange = event => { filter = event.target.value; render(); };
         root.querySelector("#trackingSearch").oninput = event => { search = event.target.value; render(); };
     }
-    function trackingRow(row) { return `<tr><td><div class="source-title">${esc(row.video_id || row.title || "Untitled")}</div><div class="source-subtitle">${esc(row.creator?.creator_name || row.creator?.handle || "—")} · ${esc(row.pillar?.name || "—")} / ${esc(row.topic?.name || "—")}</div></td><td>${date(row.published_at)}</td>${METRICS.map(metric => `<td>${editableMetric(row, metric)}</td>`).join("")}<td class="row-actions"><button type="button" class="table-action" data-track-edit="${esc(row.id)}">Edit</button></td></tr>`; }
+    function trackingRow(row) { return `<tr><td><div class="source-title">${esc(row.video_id || row.title || "Untitled")}</div><div class="source-subtitle">${esc(row.creator?.creator_name || row.creator?.handle || "—")} · ${esc(row.niche?.name || "—")} · ${esc(row.pillar?.name || "—")} / ${esc(row.topic?.name || "—")}</div></td><td>${date(row.published_at)}</td>${METRICS.map(metric => `<td>${editableMetric(row, metric)}</td>`).join("")}<td class="row-actions"><button type="button" class="table-action" data-track-edit="${esc(row.id)}">Edit</button></td></tr>`; }
     function editableMetric(row, field) { return `<span class="tracking-editable" data-track-field="${field}" data-track-id="${esc(row.id)}">${fmt(row[field])}</span>`; }
     async function inlineMetric(element) { const row = rows.find(item => item.id === element.dataset.trackId), field = element.dataset.trackField; if (!row || !METRICS.includes(field)) return; const input = document.createElement("input"); input.type = "number"; input.min = "0"; input.value = Number(row[field] || 0); input.className = "inline-edit-input"; element.replaceChildren(input); input.focus(); input.select(); let done = false; const save = async () => { if (done) return; done = true; const value = Number(input.value || 0), { error } = await supabase.from("videos").update({ [field]: value }).eq("id", row.id); if (error) { alert(error.message); render(); return; } row[field] = value; render(); }; input.onblur = save; input.onkeydown = event => { if (event.key === "Enter") save(); if (event.key === "Escape") { done = true; render(); } }; }
     async function openMetricsModal(editId = null) {
