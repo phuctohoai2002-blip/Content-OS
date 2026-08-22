@@ -8,7 +8,8 @@ import settingsHtml from "../pages/settings.html?raw";
 
 import { initLibrary } from "./library.js";
 import { initCalendarWorkspace } from "./calendar.js";
-import { initTrackingWorkspace, initAnalyticsWorkspace } from "./workspace.js";
+import { initTrackingWorkspace } from "./tracking.js";
+import { initAnalyticsWorkspace } from "./workspace.js";
 import { initTaxonomy } from "./taxonomy-v2.js";
 
 const routes={
@@ -44,7 +45,7 @@ function loadPage(pageName){
         if(pageName==="dashboard") window.initDashboardWorkspace?.();
         if(pageName==="library") initLibrary().catch(e=>console.error("Library module failed:",e));
         if(pageName==="calendar") initCalendarWorkspace().catch(e=>console.error("Calendar module failed:",e));
-        if(pageName==="tracking") initTrackingWorkspace();
+        if(pageName==="tracking") initTrackingWorkspace().catch(e=>console.error("Tracking module failed:",e));
         if(pageName==="analytics") initAnalyticsWorkspace();
         if(pageName==="taxonomy"||pageName==="niches") initTaxonomy().catch(e=>console.error("Taxonomy module failed:",e));
     } catch(error) {
