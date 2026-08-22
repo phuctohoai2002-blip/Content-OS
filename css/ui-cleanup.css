@@ -5,3 +5,5 @@
 #contextNav .nav-item:hover{background:rgba(167,139,250,.08)}
 .library-add-button{margin-left:auto;white-space:nowrap}
 .add-modal-form .full-width{grid-column:1/-1}
+/* Taxonomy already has one Bulk [Module] action in the tab row. Hide the duplicate Bulk CSV injected beside the form. */
+#taxonomyWorkspace [data-tax-bulk]{display:none!important}
