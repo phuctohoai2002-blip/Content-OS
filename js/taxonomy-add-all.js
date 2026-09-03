@@ -21,20 +21,62 @@ function open(){
 async function importAll(modal){const rows=modal._rows||[],button=modal.querySelector("[data-import]");if(!rows.length)return;button.disabled=true;try{const s=await importUnified(rows);showMessage(modal,`Imported ${s.total} records: ${s.niches} niches, ${s.pillars} pillars, ${s.topics} topics, ${s.keywords} keywords, ${s.tags} tags.`,false);document.dispatchEvent(new CustomEvent("content-os:data-changed",{detail:{type:"taxonomy"}}));setTimeout(()=>modal.remove(),900)}catch(e){showMessage(modal,e.message||"Import failed.",true);button.disabled=false}}
 async function importUnified(rows){
   const clean=rows.filter(r=>TYPES.includes(norm(r.record_type))).map(normalize);
-  const {data:niches,error:ne}=await supabase.from("niches").select("id,niche_code");if(ne)throw ne;
-  const nicheMap=new Map((niches||[]).map(r=>[norm(r.niche_code),r.id]));
-  const newNiches=clean.filter(r=>r.record_type==="niche").map(r=>({name:r.niche_name||r.niche_code,niche_code:r.niche_code||null,description:r.niche_description||null,status:r.status||"active"}));
-  if(newNiches.length){const {data,error}=await supabase.from("niches").insert(newNiches).select("id,niche_code");if(error)throw new Error(`Niches: ${error.message}`);(data||[]).forEach(r=>nicheMap.set(norm(r.niche_code),r.id))}
-  const {data:pillars,error:pe}=await supabase.from("pillars").select("id,pillar_code");if(pe)throw pe;const pillarMap=new Map((pillars||[]).map(r=>[norm(r.pillar_code),r.id]));
-  const newPillars=clean.filter(r=>r.record_type==="pillar").map(r=>({name:r.pillar_name||r.pillar_code,pillar_code:r.pillar_code||null,niche_id:nicheMap.get(norm(r.niche_code))||null,description:r.pillar_description||null,status:r.status||"active"}));
+
+  // Load existing niches first. A niche is considered the same by niche_code;
+  // if no code is supplied, fall back to the niche name. Existing niches are reused
+  // instead of inserted again, and duplicate niche rows in the same CSV reuse one id.
+  const {data:niches,error:ne}=await supabase.from("niches").select("id,niche_code,name");
+  if(ne)throw ne;
+  const nicheMap=new Map();
+  (niches||[]).forEach(r=>{
+    if(r.niche_code)nicheMap.set(norm(r.niche_code),r.id);
+    if(r.name)nicheMap.set(`name:${norm(r.name)}`,r.id);
+  });
+
+  const newNiches=[];
+  const pendingNicheKeys=new Set();
+  clean.filter(r=>r.record_type==="niche").forEach(r=>{
+    const code=norm(r.niche_code);
+    const name=norm(r.niche_name||r.niche_code);
+    const key=code||`name:${name}`;
+    const existingId=nicheMap.get(key)||nicheMap.get(`name:${name}`);
+    if(existingId){
+      if(code)nicheMap.set(code,existingId);
+      if(name)nicheMap.set(`name:${name}`,existingId);
+      return;
+    }
+    if(pendingNicheKeys.has(key))return;
+    pendingNicheKeys.add(key);
+    newNiches.push({name:r.niche_name||r.niche_code,niche_code:r.niche_code||null,description:r.niche_description||null,status:r.status||"active"});
+  });
+
+  if(newNiches.length){
+    const {data,error}=await supabase.from("niches").insert(newNiches).select("id,niche_code,name");
+    if(error)throw new Error(`Niches: ${error.message}`);
+    (data||[]).forEach(r=>{
+      if(r.niche_code)nicheMap.set(norm(r.niche_code),r.id);
+      if(r.name)nicheMap.set(`name:${norm(r.name)}`,r.id);
+    });
+  }
+
+  const {data:pillars,error:pe}=await supabase.from("pillars").select("id,pillar_code");
+  if(pe)throw pe;
+  const pillarMap=new Map((pillars||[]).map(r=>[norm(r.pillar_code),r.id]));
+  const newPillars=clean.filter(r=>r.record_type==="pillar").map(r=>({name:r.pillar_name||r.pillar_code,pillar_code:r.pillar_code||null,niche_id:nicheMap.get(norm(r.niche_code))||nicheMap.get(`name:${norm(r.niche_name)}`)||null,description:r.pillar_description||null,status:r.status||"active"}));
   if(newPillars.length){const {data,error}=await supabase.from("pillars").insert(newPillars).select("id,pillar_code");if(error)throw new Error(`Pillars: ${error.message}`);(data||[]).forEach(r=>pillarMap.set(norm(r.pillar_code),r.id))}
-  const {data:topics,error:te}=await supabase.from("topics").select("id,topic_code");if(te)throw te;const topicMap=new Map((topics||[]).map(r=>[norm(r.topic_code),r.id]));
-  const newTopics=clean.filter(r=>r.record_type==="topic").map(r=>({name:r.topic_name||r.topic_code,topic_code:r.topic_code||null,niche_id:nicheMap.get(norm(r.niche_code))||null,pillar_id:pillarMap.get(norm(r.pillar_code))||null,description:r.topic_description||null,status:r.status||"active"}));
+
+  const {data:topics,error:te}=await supabase.from("topics").select("id,topic_code");
+  if(te)throw te;
+  const topicMap=new Map((topics||[]).map(r=>[norm(r.topic_code),r.id]));
+  const newTopics=clean.filter(r=>r.record_type==="topic").map(r=>({name:r.topic_name||r.topic_code,topic_code:r.topic_code||null,niche_id:nicheMap.get(norm(r.niche_code))||nicheMap.get(`name:${norm(r.niche_name)}`)||null,pillar_id:pillarMap.get(norm(r.pillar_code))||null,description:r.topic_description||null,status:r.status||"active"}));
   if(newTopics.length){const {data,error}=await supabase.from("topics").insert(newTopics).select("id,topic_code");if(error)throw new Error(`Topics: ${error.message}`);(data||[]).forEach(r=>topicMap.set(norm(r.topic_code),r.id))}
-  const keywordRows=clean.filter(r=>r.record_type==="keyword"&&r.keyword).map(r=>({keyword:r.keyword,keyword_code:r.keyword_code||null,niche_id:nicheMap.get(norm(r.niche_code))||null,pillar_id:pillarMap.get(norm(r.pillar_code))||null,topic_id:topicMap.get(norm(r.topic_code))||null,category:r.keyword_category||null,vietnamese_meaning:r.vietnamese_meaning||null,platform:r.keyword_platform||null,status:r.status||"active"}));
+
+  const keywordRows=clean.filter(r=>r.record_type==="keyword"&&r.keyword).map(r=>({keyword:r.keyword,keyword_code:r.keyword_code||null,niche_id:nicheMap.get(norm(r.niche_code))||nicheMap.get(`name:${norm(r.niche_name)}`)||null,pillar_id:pillarMap.get(norm(r.pillar_code))||null,topic_id:topicMap.get(norm(r.topic_code))||null,category:r.keyword_category||null,vietnamese_meaning:r.vietnamese_meaning||null,platform:r.keyword_platform||null,status:r.status||"active"}));
   if(keywordRows.length){const {error}=await supabase.from("keywords").insert(keywordRows);if(error)throw new Error(`Keywords: ${error.message}`)}
-  const tagRows=clean.filter(r=>r.record_type==="tag"&&r.tag_name).map(r=>({name:r.tag_name,slug:slug(r.tag_name),niche_id:nicheMap.get(norm(r.niche_code))||null,pillar_id:pillarMap.get(norm(r.pillar_code))||null,topic_id:topicMap.get(norm(r.topic_code))||null,description:r.tag_description||null}));
+
+  const tagRows=clean.filter(r=>r.record_type==="tag"&&r.tag_name).map(r=>({name:r.tag_name,slug:slug(r.tag_name),niche_id:nicheMap.get(norm(r.niche_code))||nicheMap.get(`name:${norm(r.niche_name)}`)||null,pillar_id:pillarMap.get(norm(r.pillar_code))||null,topic_id:topicMap.get(norm(r.topic_code))||null,description:r.tag_description||null}));
   if(tagRows.length){const {error}=await supabase.from("tags").insert(tagRows);if(error)throw new Error(`Tags: ${error.message}`)}
+
   return {total:clean.length,niches:newNiches.length,pillars:newPillars.length,topics:newTopics.length,keywords:keywordRows.length,tags:tagRows.length};
 }
 function downloadTemplate(){const sample=[["niche","DIG","Digital Design","Design and creative tools","","","","","","","","","","","","","","active"],["pillar","DIG","","","PS","Photoshop","Photoshop workflow","","","","","","","","","","","active"],["topic","DIG","","","PS","","","MASK","Layer Masks","Masking techniques","","","","","","","","active"],["keyword","DIG","","","PS","","","MASK","","","KW001","layer mask","Tutorial","mat thuop lop","Douyin","","","active"],["tag","DIG","","","PS","","","MASK","","","","","","","","Tutorial","Beginner tutorial","active"]];const csv=[COLUMNS.join(","),...sample.map(r=>r.map(csvCell).join(","))].join("\n")+"\n";download(csv,"taxonomy-all-template.csv")}
