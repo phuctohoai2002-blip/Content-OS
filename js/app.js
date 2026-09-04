@@ -73,13 +73,20 @@ async function initDashboardWorkspace() {
     try {
         const { nicheId } = getCurrentNicheContext();
         const scope = query => nicheId ? query.eq("niche_id", nicheId) : query;
+        const recentContentQuery = scope(
+            supabase.from("videos")
+                .select("id,video_id,title,status,created_at,niche_id,pillar_id")
+                .in("status", ["editing","edited","ready","scheduled","published"])
+                .order("created_at", { ascending:false })
+                .limit(5)
+        );
         const results = await Promise.all([
             nicheId ? Promise.resolve({ name:"niches", count:1, data:null, error:null }) : supabase.from("niches").select("id", { count:"exact", head:true }).eq("status", "active"),
             scope(supabase.from("creators").select("id", { count:"exact", head:true })),
             scope(supabase.from("sources").select("id", { count:"exact", head:true })),
             scope(supabase.from("content_items").select("id", { count:"exact", head:true }).eq("stage", "ready")),
             scope(supabase.from("pillar_performance").select("pillar_id,pillar_name,niche_id,video_count,total_views,total_followers").order("total_views", { ascending:false }).limit(5)),
-            scope(supabase.from("content_items").select("id,title,stage,created_at,niche_id,pillar_id").order("created_at", { ascending:false }).limit(5))
+            recentContentQuery
         ]);
         const labels = ["niches", "creators", "sources", "ready content", "pillar performance", "recent content"];
         const failed = results.findIndex(result => result?.error);
@@ -99,7 +106,7 @@ async function loadNicheNames(){const {data,error}=await supabase.from("niches")
 async function loadPillarNames(){const {data,error}=await supabase.from("pillars").select("id,name");if(error)throw new Error(`pillar names: ${error.message||error.code}`);return new Map((data||[]).map(x=>[x.id,x.name]))}
 function renderDashboardStats({niches,creators,sources,ready,scoped}){setText("dashboardNiches",formatNumber(niches));setText("dashboardCreators",formatNumber(creators));setText("dashboardSources",formatNumber(sources));setText("dashboardReady",formatNumber(ready));setText("dashboardNichesMeta",scoped?"Current niche":"Active workspaces")}
 function renderDashboardPillars(rows,nicheMap){const body=document.getElementById("dashboardPillarsBody");if(!body)return;if(!rows.length){body.innerHTML='<tr><td colspan="5"><div class="empty-state compact"><strong>No published performance yet</strong><p>Publish some videos to see pillar performance here.</p></div></td></tr>';return}body.innerHTML=rows.map(row=>{const niche=nicheMap.get(row.niche_id);return `<tr><td>${escapeHtml(row.pillar_name||"—")}</td><td>${escapeHtml(niche?.name||"—")}</td><td>${formatNumber(row.video_count)}</td><td>${formatNumber(row.total_views)}</td><td>${formatNumber(row.total_followers)}</td></tr>`}).join("")}
-function renderRecentContent(rows,nicheMap,pillarMap){const body=document.getElementById("dashboardRecentBody");if(!body)return;if(!rows.length){body.innerHTML='<tr><td colspan="4"><div class="empty-state compact"><strong>No content yet</strong><p>Create your first content item from the Content module.</p></div></td></tr>';return}body.innerHTML=rows.map(row=>{const niche=nicheMap.get(row.niche_id);return `<tr><td>${escapeHtml(row.title||"Untitled content")}</td><td>${escapeHtml(niche?.name||"—")}</td><td>${escapeHtml(pillarMap.get(row.pillar_id)||"—")}</td><td><span class="badge">${escapeHtml(formatStage(row.stage))}</span></td></tr>`}).join("")}
+function renderRecentContent(rows,nicheMap,pillarMap){const body=document.getElementById("dashboardRecentBody");if(!body)return;if(!rows.length){body.innerHTML='<tr><td colspan="4"><div class="empty-state compact"><strong>No content yet</strong><p>Create your first content item from the Content module.</p></div></td></tr>';return}body.innerHTML=rows.map(row=>{const niche=nicheMap.get(row.niche_id);return `<tr><td>${escapeHtml(row.title||row.video_id||"Untitled content")}</td><td>${escapeHtml(niche?.name||"—")}</td><td>${escapeHtml(pillarMap.get(row.pillar_id)||"—")}</td><td><span class="badge">${escapeHtml(formatStage(row.status))}</span></td></tr>`}).join("")}
 function formatStage(stage){if(!stage)return"Unknown";return stage.replace(/_/g," ").replace(/\b\w/g,char=>char.toUpperCase())}
 function formatNumber(value){return new Intl.NumberFormat("en-US",{notation:"compact",maximumFractionDigits:1}).format(Number(value||0))}
 function setText(id,value){const element=document.getElementById(id);if(element)element.textContent=value}
